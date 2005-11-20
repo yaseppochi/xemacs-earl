@@ -1,0 +1,20 @@
+git-branch
+
+This branch is planned to integrate functionality of the Git SCM (used by
+Linux into XEmacs.  The Git core code is C, and so should be fairly portable,
+but most of the "porcelain" (both from the Git distribution and from
+derivative SCMs like Cogito) is shell script.  That is not very portable,
+especially to non-GNU systems.
+
+The first milestone is to add libcurl facilities.
+
+The second milestone is to integrate curl and other content access facilities
+(libneon for DAV, ssh, and local file access) into an EARL (Emacs Augmented
+Resource Locator) package which will allow users to specify URLs instead of
+Emacs-specific forms (such XEmacs TRAMP or EFS notation).
+
+The third milestone (not strictly dependent on the second, and not entirely
+dependent on the first) is to integrate the Git "plumbing" as a module.
+
+We'll be eating our own dogfood, using Git as the SCM to manage the codebase.
+
