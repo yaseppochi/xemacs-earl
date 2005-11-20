@@ -748,9 +748,6 @@ XE_MERGED_ARG([xface],
 XE_MERGED_ARG([gif],
 	AC_HELP_STRING([--with-gif],[Compile without the (builtin) support for GIF images.]),
 	[], [])
-XE_MERGED_ARG([svg],
-	AC_HELP_STRING([--with-svg],[Compile with support for SVG images.  EXPERIMENTAL.]),
-	[], [])
 dnl
 XE_HELP_SUBSECTION([Sound options])
 XE_COMPLEX_ARG([sound],
@@ -832,6 +829,12 @@ XE_MERGED_ARG([ldap],
 	[], [])
 XE_MERGED_ARG([postgresql],
 	AC_HELP_STRING([--with-postgresql],[Support the PostgreSQL RDBMS.]),
+	[], [])
+XE_MERGED_ARG([curl],
+	AC_HELP_STRING([--with-curl],[Support the libcurl API.]),
+	[], [])
+XE_MERGED_ARG([git],
+	AC_HELP_STRING([--with-git],[Support the libgit API.]),
 	[], [])
 dnl
 XE_HELP_SUBSECTION([Mail options])
@@ -3088,6 +3091,7 @@ if test "${GTK_CONFIG}" != "no"; then
       OLD_CPPFLAGS="${CPPFLAGS}"
       OLD_LDFLAGS="${LDFLAGS}"
       CFLAGS="${GTK_CFLAGS} ${CFLAGS}"
+      dnl #### shouldn't this reference ${CPPFLAGS}?
       CPPFLAGS="${GTK_CFLAGS} ${CFLAGS}"
       LDFLAGS="${LDFLAGS} ${GTK_LIBS}"
       AC_CHECK_HEADERS(glade/glade.h glade.h)
@@ -3850,6 +3854,27 @@ dnl Look for these standard header file locations, known to be used on Linux
   fi
 fi
 AC_SUBST(postgresql_libs)
+
+dnl Configure libcurl
+curl_libs=''
+if test "$with_curl" = "yes"; then
+  CURL_CONFIG=`which curl-config`
+  if test -z $CURL_CONFIG; then
+    with_curl=no
+    XE_DIE([Cannot fulfil --with-curl, curl-config not found.])
+  else
+    curl_libs=`curl-config --libs`
+    curl_cflags=`curl-config --cflags`
+    XE_PREPEND([$curl_cflags],CFLAGS)
+  fi
+fi
+AC_SUBST(curl_libs) 
+
+dnl Configure libgit
+git_libs=''
+if test "$with_git" = "yes"; then
+  git_libs=-lgit
+fi  
 
 dnl ----------------------
 dnl Graphics libraries
@@ -5351,7 +5376,7 @@ dnl Use XE_SPACE instead of plain assignment statements to remove extraneous bla
 if test "$enable_modules" = "yes"; then
   ld_libs_module=
 else
-  XE_SPACE(ld_libs_module, $ldap_libs $postgresql_libs $canna_libs)
+  XE_SPACE(ld_libs_module, $ldap_libs $postgresql_libs $canna_libs $curl_libs $git_libs)
 fi
 
 XE_SPACE(CFLAGS, $CFLAGS)
@@ -5930,6 +5955,8 @@ if test "$with_postgresql" = yes; then
   echo "    - Using PostgreSQL header file:  $libpq_fe_h_file"
   test "$with_postgresqlv7" = yes && echo "    - Using PostgreSQL V7 bindings."
 fi
+test "$with_curl" = yes && echo "  Compiling in support for libcurl API."
+test "$with_git" = yes && echo "  Compiling in support for libgit API."
 
 echo "
 Internationalization:"

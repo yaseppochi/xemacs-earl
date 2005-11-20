@@ -537,6 +537,12 @@ things are arranged in config.h.in.  In particular:
 /* main PostgreSQL header file */
 #undef LIBPQ_FE_H_FILE
 
+/* Do we want libcurl support? */
+#undef HAVE_CURL
+
+/* Do we want Git SCM support? */
+#undef HAVE_GIT
+
 /* Do you have the Xauth library present?  This will add some extra
    functionality to gnuserv. */
 #undef HAVE_XAUTH
