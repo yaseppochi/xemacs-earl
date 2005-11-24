@@ -297,6 +297,7 @@ enum lrecord_type
   lrecord_type_bignum,
   lrecord_type_ratio,
   lrecord_type_bigfloat,
+  lrecord_type_url_handle,
 #ifndef MC_ALLOC
   lrecord_type_free, /* only used for "free" lrecords */
   lrecord_type_undefined, /* only used for debugging */

@@ -3858,14 +3858,22 @@ AC_SUBST(postgresql_libs)
 dnl Configure libcurl
 curl_libs=''
 if test "$with_curl" = "yes"; then
-  CURL_CONFIG=`which curl-config`
-  if test -z $CURL_CONFIG; then
+  AC_CHECKING([for cURL])
+  AC_CHECK_PROG (have_curl_config, curl-config, yes, no)
+  if test "$have_curl_config" = "no"; then
     with_curl=no
-    XE_DIE([Cannot fulfil --with-curl, curl-config not found.])
   else
+    AC_DEFINE(HAVE_CURL)
+    XE_APPEND(`curl-config --cflags`, c_switch_site)
     curl_libs=`curl-config --libs`
-    curl_cflags=`curl-config --cflags`
-    XE_PREPEND([$curl_cflags],CFLAGS)
+    XE_APPEND(modules/curl, MAKE_SUBDIR)
+    need_modules_common=yes
+    if test "$enable_modules" = "yes"; then
+      XE_APPEND(modules/curl, INSTALL_ARCH_DEP_SUBDIR)
+    fi
+  fi
+  if test "$with_curl" != "yes"; then
+    XE_DIE([Cannot fulfil --with-curl, curl-config not found.])
   fi
 fi
 AC_SUBST(curl_libs) 
@@ -3873,7 +3881,9 @@ AC_SUBST(curl_libs)
 dnl Configure libgit
 git_libs=''
 if test "$with_git" = "yes"; then
+  AC_CHECKING([for git])
   git_libs=-lgit
+  AC_MSG_RESULT([Building in support for git])
 fi  
 
 dnl ----------------------
