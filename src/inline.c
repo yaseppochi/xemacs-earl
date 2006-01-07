@@ -86,8 +86,16 @@ Boston, MA 02111-1307, USA.  */
 #include "../modules/postgresql/postgresql.h"
 #endif
 
-#if defined (HAVE_LDAP)
+#if defined (HAVE_CURL)
 #include "../modules/curl/curl_api.h"
+#endif
+
+#if defined (HAVE_NEON)
+#include "../modules/neon/neon_api.h"
+#endif
+
+#if defined (HAVE_GIT)
+#include "../modules/git/git_api.h"
 #endif
 
 #ifdef HAVE_TOOLBARS

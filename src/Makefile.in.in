@@ -222,6 +222,10 @@ postgresql_objs=$(BLDMODULES)/postgresql/postgresql.o
 curl_objs=$(BLDMODULES)/curl/curl_api.o
 #endif
 
+#if defined(HAVE_NEON) && !defined(HAVE_SHLIB)
+neon_objs=$(BLDMODULES)/neon/neon_api.o
+#endif
+
 #if defined(HAVE_GIT) && !defined(HAVE_SHLIB)
 git_objs=$(BLDMODULES)/git/git_api.o
 #endif
@@ -273,31 +277,37 @@ mc_alloc_objs=mc-alloc.o
 ## if they all come out null.
 
 objs=\
- abbrev.o alloc.o alloca.o \
- $(balloon_help_objs) blocktype.o buffer.o bytecode.o \
- callint.o casefiddle.o casetab.o chartab.o \
- $(clash_detection_objs) cmdloop.o cmds.o $(coding_system_objs) console.o \
- console-stream.o $(curl_objs) \
+ abbrev.o alloc.o alloca.o\
+ $(balloon_help_objs) blocktype.o buffer.o bytecode.o\
+ callint.o casefiddle.o casetab.o chartab.o\
+ $(clash_detection_objs) cmdloop.o cmds.o $(coding_system_objs) console.o\
+ console-stream.o $(curl_objs)\
  data.o $(database_objs) $(debug_objs) device.o dired.o doc.o doprnt.o\
- dynarr.o \
+ dynarr.o\
  editfns.o elhash.o emacs.o emodules.o eval.o events.o\
  event-stream.o $(event_unixoid_objs) $(extra_objs) extents.o\
- faces.o file-coding.o fileio.o $(LOCK_OBJ) filemode.o floatfns.o fns.o \
+ faces.o file-coding.o fileio.o $(LOCK_OBJ) filemode.o floatfns.o fns.o\
  font-lock.o frame.o\
  general.o $(gif_objs) $(git_objs) glyphs.o glyphs-eimage.o glyphs-shared.o\
- glyphs-widget.o $(gpm_objs) $(gtk_objs) $(gtk_gui_objs) $(gui_objs) \
+ glyphs-widget.o $(gpm_objs) $(gtk_objs) $(gtk_gui_objs) $(gui_objs)\
  gutter.o\
- hash.o imgproc.o indent.o insdel.o intl.o\
- keymap.o $(RTC_patch_objs) line-number.o $(ldap_objs) lread.o lstream.o\
- $(mc_alloc_objs) \
+ hash.o\
+ imgproc.o indent.o insdel.o intl.o\
+ keymap.o $(RTC_patch_objs)\
+ line-number.o $(ldap_objs) lread.o lstream.o\
+ $(mc_alloc_objs)\
  macros.o marker.o md5.o minibuf.o $(mswindows_objs) $(mswindows_gui_objs)\
- $(mule_objs) $(mule_canna_objs) $(mule_wnn_objs) $(number_objs) objects.o\
- opaque.o $(postgresql_objs) print.o process.o $(process_objs) $(profile_objs)\
+ $(mule_objs) $(mule_canna_objs) $(mule_wnn_objs)\
+ $(neon_objs) $(number_objs)\
+ objects.o opaque.o\
+ $(postgresql_objs) print.o process.o $(process_objs) $(profile_objs)\
  rangetab.o realpath.o redisplay.o redisplay-output.o regex.o\
  search.o select.o $(sheap_objs) $(shlib_objs) signal.o sound.o\
  specifier.o strftime.o $(sunpro_objs) symbols.o syntax.o sysdep.o\
- text.o $(tooltalk_objs) $(tty_objs) undo.o unicode.o $(x_objs) $(x_gui_objs)\
- widget.o window.o $(win32_objs)
+ text.o $(tooltalk_objs) $(tty_objs)\
+ undo.o unicode.o\
+ widget.o window.o $(win32_objs)\
+ $(x_objs) $(x_gui_objs)
 
 obj_rtl = $(objs:.o=.c.rtl)
 

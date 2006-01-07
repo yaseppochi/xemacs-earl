@@ -830,6 +830,9 @@ XE_MERGED_ARG([ldap],
 XE_MERGED_ARG([postgresql],
 	AC_HELP_STRING([--with-postgresql],[Support the PostgreSQL RDBMS.]),
 	[], [])
+XE_MERGED_ARG([neon],
+	AC_HELP_STRING([--with-neon],[Support the libneon API.]),
+	[], [])
 XE_MERGED_ARG([curl],
 	AC_HELP_STRING([--with-curl],[Support the libcurl API.]),
 	[], [])
@@ -3859,11 +3862,10 @@ dnl Configure libcurl
 curl_libs=''
 if test "$with_curl" = "yes"; then
   AC_CHECKING([for cURL])
-  AC_CHECK_PROG (have_curl_config, curl-config, yes, no)
+  AC_CHECK_PROG(have_curl_config, curl-config, yes, no)
   if test "$have_curl_config" = "no"; then
     with_curl=no
   else
-    AC_DEFINE(HAVE_CURL)
     XE_APPEND(`curl-config --cflags`, c_switch_site)
     curl_libs=`curl-config --libs`
     XE_APPEND(modules/curl, MAKE_SUBDIR)
@@ -3871,12 +3873,36 @@ if test "$with_curl" = "yes"; then
     if test "$enable_modules" = "yes"; then
       XE_APPEND(modules/curl, INSTALL_ARCH_DEP_SUBDIR)
     fi
+    AC_DEFINE(HAVE_CURL)
   fi
   if test "$with_curl" != "yes"; then
     XE_DIE([Cannot fulfil --with-curl, curl-config not found.])
   fi
 fi
 AC_SUBST(curl_libs) 
+
+dnl Configure libneon
+neon_libs=''
+if test "$with_neon" = "yes"; then
+  AC_CHECKING([for neon])
+  AC_CHECK_PROG(have_neon_config, neon-config, yes, no)
+  if test "$have_neon_config" = "no"; then
+    with_neon=no
+  else
+    XE_APPEND(`neon-config --cflags`, c_switch_site)
+    neon_libs=`neon-config --libs`
+    XE_APPEND(modules/neon, MAKE_SUBDIR)
+    need_modules_common=yes
+    if test "$enable_modules" = "yes"; then
+      XE_APPEND(modules/neon, INSTALL_ARCH_DEP_SUBDIR)
+    fi
+    AC_DEFINE(HAVE_NEON)
+  fi
+  if test "$with_neon" != "yes"; then
+    XE_DIE([Cannot fulfil --with-neon, neon-config not found.])
+  fi
+fi
+AC_SUBST(neon_libs) 
 
 dnl Configure libgit
 git_libs=''
@@ -5386,7 +5412,7 @@ dnl Use XE_SPACE instead of plain assignment statements to remove extraneous bla
 if test "$enable_modules" = "yes"; then
   ld_libs_module=
 else
-  XE_SPACE(ld_libs_module, $ldap_libs $postgresql_libs $canna_libs $curl_libs $git_libs)
+  XE_SPACE(ld_libs_module, $ldap_libs $postgresql_libs $canna_libs $curl_libs $neon_libs $git_libs)
 fi
 
 XE_SPACE(CFLAGS, $CFLAGS)
@@ -5818,6 +5844,19 @@ case "$ld_switch_site" in
 esac
 
 echo "
+Internationalization:"
+test "$enable_mule" = yes && echo "  Compiling in support for Mule (multi-lingual Emacs)."
+test "$with_xim" != no && echo "  Compiling in support for XIM (X11R5+ I18N input method)."
+test "$with_xim" = motif && echo "    - Using Motif to provide XIM support."
+test "$with_xim" = xlib && echo "    - Using raw Xlib to provide XIM support."
+test "$with_xfs" = yes && echo "    - Using XFontSet to provide bilingual menubar."
+test "$with_canna" = yes && echo "  Compiling in support for Canna on Mule."
+if test "$with_wnn" = yes; then
+  echo "  Compiling in support for the WNN input method on Mule."
+  test "$with_wnn6" = yes && echo "    - Using WNN version 6."
+fi
+
+echo "
 Window System:"
 if test "$with_msw" = "yes"; then
   echo "  Compiling in support for the Microsoft window system."
@@ -5965,21 +6004,6 @@ if test "$with_postgresql" = yes; then
   echo "    - Using PostgreSQL header file:  $libpq_fe_h_file"
   test "$with_postgresqlv7" = yes && echo "    - Using PostgreSQL V7 bindings."
 fi
-test "$with_curl" = yes && echo "  Compiling in support for libcurl API."
-test "$with_git" = yes && echo "  Compiling in support for libgit API."
-
-echo "
-Internationalization:"
-test "$enable_mule" = yes && echo "  Compiling in support for Mule (multi-lingual Emacs)."
-test "$with_xim" != no && echo "  Compiling in support for XIM (X11R5+ I18N input method)."
-test "$with_xim" = motif && echo "    - Using Motif to provide XIM support."
-test "$with_xim" = xlib && echo "    - Using raw Xlib to provide XIM support."
-test "$with_xfs" = yes && echo "    - Using XFontSet to provide bilingual menubar."
-test "$with_canna" = yes && echo "  Compiling in support for Canna on Mule."
-if test "$with_wnn" = yes; then
-  echo "  Compiling in support for the WNN input method on Mule."
-  test "$with_wnn6" = yes && echo "    - Using WNN version 6."
-fi
 
 echo "
 Mail:"
@@ -5989,12 +6013,18 @@ test "$with_hesiod" = yes && echo "  Compiling in support for Hesiod POP server 
 test -n "$with_mail_locking" && echo "  Compiling in support for \"$with_mail_locking\" mail spool file locking method."
 
 echo "
-Other Features:"
+Network and Distributed Applications:"
+test "$with_curl" = yes && echo "  Compiling in support for libcurl API."
+test "$with_neon" = yes && echo "  Compiling in support for libneon API."
+test "$with_git" = yes && echo "  Compiling in support for libgit API."
 test "$with_ipv6_cname" = no && echo "  Inhibiting IPv6 canonicalization at startup."
-test "$with_tooltalk" = yes && echo "  Compiling in support for ToolTalk."
-test "$with_workshop" = yes && echo "  Compiling in support for Sun WorkShop."
 test "$with_socks" = yes && echo "  Compiling in support for SOCKS."
 test "$with_dnet" = yes && echo "  Compiling in support for DNET."
+
+echo "
+Other Features:"
+test "$with_tooltalk" = yes && echo "  Compiling in support for ToolTalk."
+test "$with_workshop" = yes && echo "  Compiling in support for Sun WorkShop."
 test "$enable_modules" = "yes" && echo "  Compiling in support for dynamic shared object modules."
 test "$enable_bignum" = "gmp" && echo "  Compiling in support for more number types using the GNU MP library."
 test "$enable_bignum" = "mp" && echo "  Compiling in support for more number types using the BSD MP library."
