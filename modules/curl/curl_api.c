@@ -32,7 +32,7 @@
 
 /* Local references to Lisp symbols */
 static Lisp_Object Qcurl_api, Qcurl, Qurl_handlep,
-  Qlong, Qfunctionpoint, Qobjectpoint, Qoff_t;
+  Qlong, Qfunctionpoint, Qobjectpoint, Qoff_t, Qdouble;
 
 static Lisp_Object Vcurl_option_hash_table, Vcurl_info_hash_table;
 
@@ -373,6 +373,7 @@ HANDLE must be an url-handle object of type `curl'.
 A wrapper with some validation for libcurl's `curl_easy_getinfo'.
 Errors without useful explanations probably mean `curl-info-hash-table'
 is corrupt.
+String returns are encoded with the `binary' coding system.
 */
        (attribute, handle))
 {
@@ -381,7 +382,9 @@ is corrupt.
   Lisp_Object attindex = Fcar (Fcdr (attdata));
   CURL *curl;
   CURLcode code;
+  CURLoption index;
   Lisp_URL_Handle *h;
+  Lisp_Object value;
 
   if (NILP (attdata))
     invalid_argument ("unrecognized cURL attribute", attribute);
@@ -396,7 +399,7 @@ is corrupt.
   if (EQ (atttype, Qlong))
     {
       long retval;
-      code = curl_easy_getinfo (curl, (CURLoption) index, &retval);
+      code = curl_easy_getinfo (curl, index, &retval);
       CHECK_CURL_ERROR (code, attribute, handle);
       /* #### can this overflow? */
       value = make_int (retval);
@@ -404,14 +407,14 @@ is corrupt.
   else if (EQ (atttype, Qstring))
     {
       Extbyte *retval;
-      code = curl_easy_getinfo (curl, (CURLoption) index, &retval);
+      code = curl_easy_getinfo (curl, index, &retval);
       CHECK_CURL_ERROR (code, attribute, handle);
-      value = build_ext_string (s);
+      value = build_ext_string (retval, Qbinary);
     }
   else if (EQ (atttype, Qdouble))
     {
       double retval;
-      code = curl_easy_getinfo (curl, (CURLoption) index, &retval);
+      code = curl_easy_getinfo (curl, index, &retval);
       CHECK_CURL_ERROR (code, attribute, handle);
       value = make_float (retval);
     }
@@ -486,6 +489,7 @@ syms_of_curl_api ()
   DEFSUBR (Fcurl_make_url_handle);
   DEFSUBR (Fcurl_easy_perform);
   DEFSUBR (Fcurl_easy_setopt);
+  DEFSUBR (Fcurl_easy_getinfo);
 
   /* #### These symbols will move to the earl module. */
   DEFSYMBOL_MULTIWORD_PREDICATE (Qurl_handlep);
@@ -496,6 +500,7 @@ syms_of_curl_api ()
   DEFSYMBOL (Qlong);
   DEFSYMBOL (Qfunctionpoint);
   DEFSYMBOL (Qobjectpoint);
+  DEFSYMBOL (Qdouble);
   defsymbol (&Qoff_t, "off_t");	/* Yes, it IS worth conforming to cURL's
 				   spelling of this symbol. */
 }
@@ -565,5 +570,6 @@ unload_curl_api ()
   unstaticpro_nodump (&Qfunctionpoint);
   unstaticpro_nodump (&Qobjectpoint);
   unstaticpro_nodump (&Qoff_t);
+  unstaticpro_nodump (&Qdouble);
 }
 #endif
