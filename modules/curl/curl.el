@@ -342,7 +342,13 @@
 ;;
 ;; These are the options that can be used in curl-easy-setopt.
 
-(unless (and (boundp 'curl-option-hash-table) curl-option-hash-table)
+;; #### Probably should adapt this to the method below for
+;; `curl-info-hash-table'.
+;; Actually, probably should make the names symbols and put them in C,
+;; but that's another story.
+
+(unless (and (boundp 'curl-option-hash-table)
+	     (hash-table-p curl-option-hash-table))
   (setq curl-option-hash-table (make-hash-table :test #'equal :size 150))
 
   ;; typedef enum {
@@ -1022,49 +1028,81 @@
 ;;  * and should be set to NULL.
 ;;  */
 ;; CURL_EXTERN time_t curl_getdate(const char *p, const time_t *unused);
-;; 
-;; #define CURLINFO_STRING   0x100000
-;; #define CURLINFO_LONG     0x200000
-;; #define CURLINFO_DOUBLE   0x300000
-;; #define CURLINFO_SLIST    0x400000
-;; #define CURLINFO_MASK     0x0fffff
-;; #define CURLINFO_TYPEMASK 0xf00000
-;; 
-;; typedef enum {
-;;   CURLINFO_NONE, /* first, never use this */
-;;   CURLINFO_EFFECTIVE_URL    = CURLINFO_STRING + 1,
-;;   CURLINFO_RESPONSE_CODE    = CURLINFO_LONG   + 2,
-;;   CURLINFO_TOTAL_TIME       = CURLINFO_DOUBLE + 3,
-;;   CURLINFO_NAMELOOKUP_TIME  = CURLINFO_DOUBLE + 4,
-;;   CURLINFO_CONNECT_TIME     = CURLINFO_DOUBLE + 5,
-;;   CURLINFO_PRETRANSFER_TIME = CURLINFO_DOUBLE + 6,
-;;   CURLINFO_SIZE_UPLOAD      = CURLINFO_DOUBLE + 7,
-;;   CURLINFO_SIZE_DOWNLOAD    = CURLINFO_DOUBLE + 8,
-;;   CURLINFO_SPEED_DOWNLOAD   = CURLINFO_DOUBLE + 9,
-;;   CURLINFO_SPEED_UPLOAD     = CURLINFO_DOUBLE + 10,
-;;   CURLINFO_HEADER_SIZE      = CURLINFO_LONG   + 11,
-;;   CURLINFO_REQUEST_SIZE     = CURLINFO_LONG   + 12,
-;;   CURLINFO_SSL_VERIFYRESULT = CURLINFO_LONG   + 13,
-;;   CURLINFO_FILETIME         = CURLINFO_LONG   + 14,
-;;   CURLINFO_CONTENT_LENGTH_DOWNLOAD   = CURLINFO_DOUBLE + 15,
-;;   CURLINFO_CONTENT_LENGTH_UPLOAD     = CURLINFO_DOUBLE + 16,
-;;   CURLINFO_STARTTRANSFER_TIME = CURLINFO_DOUBLE + 17,
-;;   CURLINFO_CONTENT_TYPE     = CURLINFO_STRING + 18,
-;;   CURLINFO_REDIRECT_TIME    = CURLINFO_DOUBLE + 19,
-;;   CURLINFO_REDIRECT_COUNT   = CURLINFO_LONG   + 20,
-;;   CURLINFO_PRIVATE          = CURLINFO_STRING + 21,
-;;   CURLINFO_HTTP_CONNECTCODE = CURLINFO_LONG   + 22,
-;;   CURLINFO_HTTPAUTH_AVAIL   = CURLINFO_LONG   + 23,
-;;   CURLINFO_PROXYAUTH_AVAIL  = CURLINFO_LONG   + 24,
-;;   CURLINFO_OS_ERRNO         = CURLINFO_LONG   + 25,
-;;   CURLINFO_NUM_CONNECTS     = CURLINFO_LONG   + 26,
-;;   CURLINFO_SSL_ENGINES      = CURLINFO_SLIST  + 27,
-;;   CURLINFO_COOKIELIST       = CURLINFO_SLIST  + 28,
-;;   /* Fill in new entries below here! */
-;; 
-;;   CURLINFO_LASTONE          = 28
-;; } CURLINFO;
-;; 
+;;
+
+(unless (and (boundp 'curl-info-hash-table)
+	     (hash-table-p curl-info-hash-table))
+  (setq curl-info-hash-table (make-hash-table :test #'equal :size 30))
+
+  (let ((curlinfo-string #x100000)
+	(curlinfo-long   #x200000)
+	(curlinfo-double #x300000)
+	(curlinfo-slist  #x400000))
+    ;; #define CURLINFO_MASK     0x0fffff
+    ;; #define CURLINFO_TYPEMASK 0xf00000
+    ;; typedef enum {
+    (puthash "NONE" '(nil nil) curl-info-hash-table) ; first, never use this
+    (puthash "EFFECTIVE_URL" `(string ,(+ curlinfo-string 1))
+	     curl-info-hash-table)
+    (puthash "RESPONSE_CODE" `(long ,(+ curlinfo-long + 2))
+	     curl-info-hash-table)
+    (puthash "TOTAL_TIME" `(double ,(+ curlinfo-double 3))
+	     curl-info-hash-table)
+    (puthash "NAMELOOKUP_TIME" `(double ,(+ curlinfo-double 4))
+	     curl-info-hash-table)
+    (puthash "CONNECT_TIME" `(double ,(+ curlinfo-double 5))
+	     curl-info-hash-table)
+    (puthash "PRETRANSFER_TIME" `(double ,(+ curlinfo-double 6))
+	     curl-info-hash-table)
+    (puthash "SIZE_UPLOAD" `(double ,(+ curlinfo-double 7))
+	     curl-info-hash-table)
+    (puthash "SIZE_DOWNLOAD" `(double ,(+ curlinfo-double 8))
+	     curl-info-hash-table)
+    (puthash "SPEED_DOWNLOAD" `(double ,(+ curlinfo-double 9))
+	     curl-info-hash-table)
+    (puthash "SPEED_UPLOAD" `(double ,(+ curlinfo-double 10))
+	     curl-info-hash-table)
+    (puthash "HEADER_SIZE" `(long ,(+ curlinfo-long + 11))
+	     curl-info-hash-table)
+    (puthash "REQUEST_SIZE" `(long ,(+ curlinfo-long + 12))
+	     curl-info-hash-table)
+    (puthash "SSL_VERIFYRESULT" `(long ,(+ curlinfo-long + 13))
+	     curl-info-hash-table)
+    (puthash "FILETIME" `(long ,(+ curlinfo-long + 14))
+	     curl-info-hash-table)
+    (puthash "CONTENT_LENGTH_DOWNLOAD" `(double ,(+ curlinfo-double 15))
+	     curl-info-hash-table)
+    (puthash "CONTENT_LENGTH_UPLOAD" `(double ,(+ curlinfo-double 16))
+	     curl-info-hash-table)
+    (puthash "STARTTRANSFER_TIME" `(double ,(+ curlinfo-double 17))
+	     curl-info-hash-table)
+    (puthash "CONTENT_TYPE" `(string ,(+ curlinfo-string 18))
+	     curl-info-hash-table)
+    (puthash "REDIRECT_TIME" `(double ,(+ curlinfo-double 19))
+	     curl-info-hash-table)
+    (puthash "REDIRECT_COUNT" `(long ,(+ curlinfo-long + 20))
+	     curl-info-hash-table)
+    (puthash "PRIVATE" `(string ,(+ curlinfo-string 21))
+	     curl-info-hash-table)
+    (puthash "HTTP_CONNECTCODE" `(long ,(+ curlinfo-long + 22))
+	     curl-info-hash-table)
+    (puthash "HTTPAUTH_AVAIL" `(long ,(+ curlinfo-long + 23))
+	     curl-info-hash-table)
+    (puthash "PROXYAUTH_AVAIL" `(long ,(+ curlinfo-long + 24))
+	     curl-info-hash-table)
+    (puthash "OS_ERRNO" `(long ,(+ curlinfo-long + 25))
+	     curl-info-hash-table)
+    (puthash "NUM_CONNECTS" `(long ,(+ curlinfo-long + 26))
+	     curl-info-hash-table)
+    (puthash "SSL_ENGINES" `(list ,(+ curlinfo-slist+ 27))
+	     curl-info-hash-table)
+    (puthash "COOKIELIST" `(list ,(+ curlinfo-slist+ 28))
+	     curl-info-hash-table)
+    ;; Fill in new entries below here!
+    (puthash "LASTONE" '(nil 28) curl-info-hash-table)
+    ;; } CURLINFO;
+    ))
+
 ;; /* CURLINFO_RESPONSE_CODE is the new name for the option previously known as
 ;;    CURLINFO_HTTP_CODE */
 ;; #define CURLINFO_HTTP_CODE CURLINFO_RESPONSE_CODE

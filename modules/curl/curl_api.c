@@ -34,7 +34,7 @@
 static Lisp_Object Qcurl_api, Qcurl, Qurl_handlep,
   Qlong, Qfunctionpoint, Qobjectpoint, Qoff_t;
 
-static Lisp_Object Vcurl_option_hash_table;
+static Lisp_Object Vcurl_option_hash_table, Vcurl_info_hash_table;
 
 /************************************************************************/
 /*                  url_handle lrecord basic functions                  */
@@ -178,6 +178,19 @@ Return the server host of the connection URL-HANDLE, as a string.
 /*			    Lisp API functions				*/
 /************************************************************************/
 
+/* error macros */
+
+#define UNIMPLEMENTED(reason) signal_error (Qunimplemented, reason, Qunbound)
+
+/* #### Do something more useful with the error codes! */
+#define CHECK_CURL_ERROR(code, index, handle)                         \
+  do { if (code)                                                      \
+         Fsignal (Qio_error,                                          \
+                  list3 (build_ext_string (curl_easy_strerror (code), \
+					   Qbinary),                  \
+			 index,                                       \
+			 handle)); } while (0)
+
 DEFUN ("curl-make-url-handle", Fcurl_make_url_handle, 1, 3, 0, /*
 Return a cURL handle for URL, wrapped in an url-handle.
 URL is a string, which must be a URI scheme known to cURL.
@@ -225,14 +238,14 @@ from a function `make-url-handle'.
   return wrap_url_handle (url_handle);
 }
 
-#define UNIMPLEMENTED(reason) signal_error (Qunimplemented, reason, Qunbound)
-
 DEFUN ("curl-easy-setopt", Fcurl_easy_setopt, 3, 3, 0, /*
 Set OPTION to VALUE on curl url-handle HANDLE and return t.
 OPTION is a string denoting an option in `curl-option-hash-table'.
 VALUE must be of the appropriate type.
 HANDLE must be an url-handle object of type `curl'.
 A wrapper with some validation for libcurl's `curl_easy_setopt'.
+Errors without useful explanations probably mean `curl-option-hash-table'
+is corrupt.
 */
        (option, value, handle))
 {
@@ -244,6 +257,8 @@ A wrapper with some validation for libcurl's `curl_easy_setopt'.
   CURLcode code;
   Lisp_URL_Handle *h;
 
+  if (NILP (optdata))
+    invalid_argument ("unrecognized cURL option", option);
   CHECK_URL_HANDLE (handle);
   h = XURL_HANDLE (handle);
   if (!EQ (h->type, Qcurl))
@@ -257,16 +272,7 @@ A wrapper with some validation for libcurl's `curl_easy_setopt'.
       CHECK_INT (value);
       index += CURLOPTTYPE_LONG;  /* CURLoptions encode type */
       code = curl_easy_setopt (curl, (CURLoption) index, XINT (value));
-      /* #### Do something more useful with the error codes! */
-      if (code)
-	{
-	  signal_error_2 (Qio_error,
-			  /* #### MEMORY LEAK!
-			     We probably don't need to copy at all, but if
-			     we do, add it to big_ball_of_strings. */
-			  strdup (curl_easy_strerror (code)),
-			  make_int (index), handle);
-	}
+      CHECK_CURL_ERROR (code, option, handle);
     }
   else if (EQ (opttype, Qobjectpoint))
     {
@@ -281,17 +287,8 @@ A wrapper with some validation for libcurl's `curl_easy_setopt'.
 	 is collected. */
       /* #### Is this the right coding system? */
       s = NEW_LISP_STRING_TO_EXTERNAL_MALLOC (value, h->coding_system);
-      /* #### Do something more useful with the error codes! */
       code = curl_easy_setopt (curl, (CURLoption) index, s);
-      if (code)
-	{
-	  signal_error_2 (Qio_error,
-			  /* #### MEMORY LEAK!
-			     We probably don't need to copy at all, but if
-			     we do, add it to big_ball_of_strings. */
-			  strdup (curl_easy_strerror (code)),
-			  make_int (index), handle);
-	}
+      CHECK_CURL_ERROR (code, option, handle);
       if (index == CURLOPT_URL)
 	{
 	  h->url = s;
@@ -309,7 +306,7 @@ A wrapper with some validation for libcurl's `curl_easy_setopt'.
     }
   else
     {
-      invalid_state ("invalid option type in `curl-option-hash-table",
+      invalid_state ("invalid option type in `curl-option-hash-table'",
 		     opttype);
     }
   return Qt;
@@ -324,11 +321,11 @@ static size_t curl_write_function (void *data, size_t size, size_t nmemb,
   return (Lstream_write (s, data, count)) ? --count : count;
 }
 
+/* #### Should this return the buffer, by analogy to `neon-request-request'? */
 DEFUN ("curl-easy-perform", Fcurl_easy_perform, 1, 2, 0, /*
 Read from the URL represented by HANDLE into BUFFER at point.
 Optional BUFFER defaults to the current buffer.
-Returns t.
-#### Maybe we should create a new buffer here?
+Returns t.  
 */
        (handle, buffer))
 {
@@ -355,15 +352,7 @@ Returns t.
 	  curl_easy_setopt (curl, CURLOPT_WRITEDATA, s);
 	  code = curl_easy_perform (curl);
 	  Lstream_close (XLSTREAM (s));
-	  if (code)
-	    {
-	      signal_error (Qio_error,
-			    /* #### MEMORY LEAK!
-			       We probably don't need to copy at all, but if
-			       we do, add it to big_ball_of_strings. */
-			    strdup (curl_easy_strerror (code)),
-			    handle);
-	    }
+	  CHECK_CURL_ERROR (code, intern ("perform"), handle);
 	}
       else
 	{
@@ -375,6 +364,67 @@ Returns t.
       wtaerror ("URL handle is not a cURL handle", handle);
     }
   return Qt;
+}
+
+DEFUN ("curl-easy-getinfo", Fcurl_easy_getinfo, 2, 2, 0, /*
+Return the value of ATTRIBUTE for HANDLE.
+ATTRIBUTE is a string denoting an attribute in `curl-info-hash-table'.
+HANDLE must be an url-handle object of type `curl'.
+A wrapper with some validation for libcurl's `curl_easy_getinfo'.
+Errors without useful explanations probably mean `curl-info-hash-table'
+is corrupt.
+*/
+       (attribute, handle))
+{
+  Lisp_Object attdata = Fgethash (attribute, Vcurl_info_hash_table, Qnil);
+  Lisp_Object atttype = Fcar (attdata);
+  Lisp_Object attindex = Fcar (Fcdr (attdata));
+  CURL *curl;
+  CURLcode code;
+  Lisp_URL_Handle *h;
+
+  if (NILP (attdata))
+    invalid_argument ("unrecognized cURL attribute", attribute);
+  CHECK_URL_HANDLE (handle);
+  h = XURL_HANDLE (handle);
+  if (!EQ (h->type, Qcurl))
+    wtaerror ("handle is not a curl handle", handle);
+  curl = h->curl_handle;
+  CHECK_INT (attindex);
+  index = XINT (attindex);
+
+  if (EQ (atttype, Qlong))
+    {
+      long retval;
+      code = curl_easy_getinfo (curl, (CURLoption) index, &retval);
+      CHECK_CURL_ERROR (code, attribute, handle);
+      /* #### can this overflow? */
+      value = make_int (retval);
+    }
+  else if (EQ (atttype, Qstring))
+    {
+      Extbyte *retval;
+      code = curl_easy_getinfo (curl, (CURLoption) index, &retval);
+      CHECK_CURL_ERROR (code, attribute, handle);
+      value = build_ext_string (s);
+    }
+  else if (EQ (atttype, Qdouble))
+    {
+      double retval;
+      code = curl_easy_getinfo (curl, (CURLoption) index, &retval);
+      CHECK_CURL_ERROR (code, attribute, handle);
+      value = make_float (retval);
+    }
+  else if (EQ (atttype, Qlist))
+    {
+      UNIMPLEMENTED ("curl_api slist attributes");
+    }
+  else
+    {
+      invalid_state ("invalid attribute type in `curl-info-hash-table'",
+		     atttype);
+    }
+  return value;  
 }
 
 /*
@@ -469,6 +519,18 @@ It is planned to add the leading comments as docstrings, to be the 4th
 element of the value list corresponding to each key.
 */ );
   Vcurl_option_hash_table = Qnil;
+
+  DEFVAR_LISP ("curl-info-hash-table", &Vcurl_info_hash_table /*
+Table of attributes accessible via `curl-easy-getinfo'.
+Keys are strings naming attributes.  The attribute names are taken from
+enum CURLinfo in <curl/curl.h>.  They are all uppercase, and the "CURLINFO_"
+prefix is omitted.
+Values are lists containing a type symbol (one of `long', `string',
+`double', and `list') and an integer, which is the attribute index.
+It is planned to add docstrings, to be the 3rd element of the value list
+corresponding to each key.
+*/ );
+  Vcurl_info_hash_table = Qnil;
 
 #ifdef HAVE_SHLIB
   /* Need to initialize cURL if loaded as a module.
