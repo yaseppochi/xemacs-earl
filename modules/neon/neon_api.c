@@ -312,7 +312,7 @@ print_session_handle (Lisp_Object obj,
 }
 
 static Lisp_Object
-session_handle_get (Lisp_Object session, Lisp_Object prop, Lisp_Object defalt)
+session_handle_get (Lisp_Object session, Lisp_Object prop)
 {
   Lisp_Session_Handle *s = XSESSION_HANDLE (session);
 
@@ -328,10 +328,10 @@ session_handle_get (Lisp_Object session, Lisp_Object prop, Lisp_Object defalt)
     return s->transport;
   /* #### should we do curl_get_info here? */
 
-  return Fplist_get (s->plist, prop, defalt);
+  return external_plist_get (&s->plist, prop, 0, ERROR_ME);
 }
 
-static Lisp_Object
+static int
 session_handle_put (Lisp_Object session, Lisp_Object prop, Lisp_Object value)
 {
   Lisp_Session_Handle *s = XSESSION_HANDLE (session);
@@ -341,14 +341,13 @@ session_handle_put (Lisp_Object session, Lisp_Object prop, Lisp_Object value)
       || EQ (prop, Qurl)
       || EQ (prop, Qcoding_system)
       || EQ (prop, Qtransport))
-    invalid_change ("read-only property", prop);
+    return 0;
 
   external_plist_put (&s->plist, prop, value, 0, ERROR_ME);
-
-  return value;
+  return 1;
 }
 
-static Lisp_Object
+static int
 session_handle_remprop (Lisp_Object session, Lisp_Object prop)
 {
   Lisp_Session_Handle *s = XSESSION_HANDLE (session);
@@ -358,9 +357,9 @@ session_handle_remprop (Lisp_Object session, Lisp_Object prop)
       || EQ (prop, Qurl)
       || EQ (prop, Qcoding_system)
       || EQ (prop, Qtransport))
-    invalid_change ("read-only property", prop);
-
-  return external_remprop (&s->plist, prop, 0, ERROR_ME) ? Qt : Qnil;
+    return -1;
+  else
+    return external_remprop (&s->plist, prop, 0, ERROR_ME) ? Qt : Qnil;
 }
 
 static Lisp_Object
@@ -369,8 +368,8 @@ session_handle_plist (Lisp_Object session)
   Lisp_Object retval;
   Lisp_Session_Handle *s;
 
-  CHECK_SESSION_HANDLE (session_handle);
-  s = XSESSION_HANDLE (session_handle);
+  CHECK_SESSION_HANDLE (session);
+  s = XSESSION_HANDLE (session);
 
   retval = s->plist;
   retval = cons3 (Qlast_response_status, s->last_response_status, retval);
@@ -475,7 +474,7 @@ Return non-nil if SESSION_HANDLE is an active SESSION_HANDLE connection.
        (session_handle))
 {
   CHECK_SESSION_HANDLE (session_handle);
-  return Fget (session_handle, Qtransport);
+  return Fget (session_handle, Qtransport, Qnil);
 }
 #endif /* !HAVE_EARL */
 
@@ -1741,10 +1740,9 @@ syms_of_neon_api ()
 
 #ifndef HAVE_EARL
   /* #### These functions will move to the earl module. */
+  DEFSUBR (Fmake_session_handle);
   DEFSUBR (Fsession_handle_p);
-  DEFSUBR (Fsession_handle_transport);
   DEFSUBR (Fsession_handle_live_p);
-  DEFSUBR (Fsession_handle_plist);
 #endif
 
   /* neon-specific functions. */

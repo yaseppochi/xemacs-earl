@@ -96,7 +96,7 @@ struct Lisp_Session_Handle
      TRANSPORT currently is used as a flag for liveness; it must be reset
      to nil if the handle can no longer be used by that transport */
   Lisp_Object transport;
-  Lisp_Object property_list;
+  Lisp_Object plist;
   /* the coding system used to convert url; READ-ONLY from Lisp */
   Lisp_Object coding_system;
   /* persistent r/w data passed as "userdata"; see enum neon_state_index */
