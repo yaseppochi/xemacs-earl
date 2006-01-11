@@ -121,15 +121,22 @@
 				   ne_utils.h, ne_defs.h, ne_ssl.h,
 				   ne_uri.h, ne_xml.h */
 
+/* feature control macros */
+
+/* the #define should move to config.h if we need it
+   these two features are mutually exclusive? */
+#define NEON_USES_HEADER_ITERATE
+#undef NEON_USES_HEADER_CATCHER
+/* possible API improvement */
+#undef LAZY_INITIALIZATION_IN_REQUEST
+
 /* callback declarations */
 
-/* this #define should be in configure if we need it */
-#define HAVE_NEON_0_25_4
 static Lisp_Object neon_status (int status);
 static Extbyte *neon_prepare_path (Lisp_Object path, Lisp_Object codesys);
 static int neon_prepare_depth (Lisp_Object depth, int kidz_ok);
 static Lisp_Object neon_prepare_http_status (ne_request *neon);
-#ifdef HAVE_NEON_0_24_7
+#ifdef NEON_USES_HEADER_CATCHER
 static void neon_header_catcher (void *userdata, const char *value);
 #endif
 static int neon_start_cb (void *userdata, int UNUSED(parent),
@@ -149,6 +156,7 @@ static Lisp_Object Qneon_api, Qneon, Qinfinite, Qwebdav_xml, Qaccept_always,
 #ifndef HAVE_EARL
   Qlast_response_headers, Qlast_response_status,
   Qsession_handlep, Qsession_handle_livep, Qtransport,
+  Qurl, Qcoding_system,
 #endif
   Qaccept_2xx, Qauthorization_failure, Qproxy_authorization_failure,
   Qconnection_failure, Qtimeout, Qgeneric_error;
@@ -213,7 +221,7 @@ static const struct memory_description session_handle_description [] = {
     offsetof (struct Lisp_Session_Handle, last_response_status) },
   { XD_LISP_OBJECT,
     offsetof (struct Lisp_Session_Handle, last_response_headers) },
-  { XD_LISP_OBJECT, offsetof (struct Lisp_Session_Handle, property_list) },
+  { XD_LISP_OBJECT, offsetof (struct Lisp_Session_Handle, plist) },
   { XD_LISP_OBJECT, offsetof (struct Lisp_Session_Handle, state) },
   { XD_LISP_OBJECT, offsetof (struct Lisp_Session_Handle, stuff) },
   { XD_END }
@@ -230,7 +238,7 @@ allocate_session_handle (void)
   session_handle->coding_system = Qnil;
   session_handle->last_response_status = Qnil;
   session_handle->last_response_headers = Qnil;
-  session_handle->property_list = Qnil;
+  session_handle->plist = Qnil;
   session_handle->state = Qnil;
   session_handle->stuff = Qnil;
 #ifdef HAVE_CURL
@@ -239,11 +247,6 @@ allocate_session_handle (void)
 #ifdef HAVE_NEON
   session_handle->neon = 0;
 #endif
-  session_handle->scheme = NULL;
-  session_handle->userinfo = NULL;
-  session_handle->host = NULL;
-  session_handle->port = 0;
-  session_handle->path = NULL;
   /* #### UNIMPLEMENTED we need to initialize the big_ball_of_strings here. */
   return session_handle;
 }
@@ -272,11 +275,6 @@ finalize_session_handle (void *header, int for_disksave)
   finalize_neon_data (session_handle->neon);
 
   /* #### UNIMPLEMENTED we need to free the big_ball_of_strings here. */
-  session_handle->scheme = NULL;
-  session_handle->userinfo = NULL;
-  session_handle->host = NULL;
-  session_handle->port = 0;
-  session_handle->path = NULL;
 }
 
 static Lisp_Object
@@ -287,7 +285,7 @@ mark_session_handle (Lisp_Object obj)
   mark_object (XSESSION_HANDLE (obj)->coding_system);
   mark_object (XSESSION_HANDLE (obj)->last_response_status);
   mark_object (XSESSION_HANDLE (obj)->last_response_headers);
-  mark_object (XSESSION_HANDLE (obj)->property_list);
+  mark_object (XSESSION_HANDLE (obj)->plist);
   mark_object (XSESSION_HANDLE (obj)->state);
   return XSESSION_HANDLE (obj)->stuff;
 }
@@ -313,34 +311,85 @@ print_session_handle (Lisp_Object obj,
   write_fmt_string (printcharfun, " 0x%lx>", (unsigned long) session_handle);
 }
 
-#ifdef PROPERTIES_ARE_IMPLEMENTED
 static Lisp_Object
 session_handle_get (Lisp_Object session, Lisp_Object prop, Lisp_Object defalt)
 {
+  Lisp_Session_Handle *s = XSESSION_HANDLE (session);
+
+  if (EQ (prop, Qlast_response_headers))
+    return s->last_response_headers;
+  else if (EQ (prop, Qlast_response_status))
+    return s->last_response_status;
+  else if (EQ (prop, Qurl))
+    return s->url;
+  else if (EQ (prop, Qcoding_system))
+    return s->coding_system;
+  else if (EQ (prop, Qtransport))
+    return s->transport;
+  /* #### should we do curl_get_info here? */
+
+  return Fplist_get (s->plist, prop, defalt);
 }
 
 static Lisp_Object
 session_handle_put (Lisp_Object session, Lisp_Object prop, Lisp_Object value)
 {
+  Lisp_Session_Handle *s = XSESSION_HANDLE (session);
+
+  if (EQ (prop, Qlast_response_headers)
+      || EQ (prop, Qlast_response_status)
+      || EQ (prop, Qurl)
+      || EQ (prop, Qcoding_system)
+      || EQ (prop, Qtransport))
+    invalid_change ("read-only property", prop);
+
+  external_plist_put (&s->plist, prop, value, 0, ERROR_ME);
+
+  return value;
 }
 
 static Lisp_Object
 session_handle_remprop (Lisp_Object session, Lisp_Object prop)
 {
+  Lisp_Session_Handle *s = XSESSION_HANDLE (session);
+
+  if (EQ (prop, Qlast_response_headers)
+      || EQ (prop, Qlast_response_status)
+      || EQ (prop, Qurl)
+      || EQ (prop, Qcoding_system)
+      || EQ (prop, Qtransport))
+    invalid_change ("read-only property", prop);
+
+  return external_remprop (&s->plist, prop, 0, ERROR_ME) ? Qt : Qnil;
 }
 
 static Lisp_Object
 session_handle_plist (Lisp_Object session)
 {
-}
-#endif
+  Lisp_Object retval;
+  Lisp_Session_Handle *s;
 
-/* #### Use DEFINE_LRECORD_IMPLEMENTATION_WITH_PROPS?
-   Special (r/o) properties: session-transport, the five canonical uri components,
-   response-headers.  For the first few uri components to be r/w, need to
-   implement connection closing and session reinitialization.  Ditto
-   session-transport.  Not worth it? */
-DEFINE_LRECORD_IMPLEMENTATION ("session_handle",	    /* name */
+  CHECK_SESSION_HANDLE (session_handle);
+  s = XSESSION_HANDLE (session_handle);
+
+  retval = s->plist;
+  retval = cons3 (Qlast_response_status, s->last_response_status, retval);
+  retval = cons3 (Qlast_response_headers, s->last_response_headers, retval);
+  retval = cons3 (Qurl, s->url, retval);
+  retval = cons3 (Qcoding_system, s->coding_system, retval);
+  retval = cons3 (Qtransport, s->transport, retval);
+
+#ifdef HAVE_CURL
+  /* #### extract properties from the curl_handle and add to retval here */
+  /* #### should we do curl_get_info here? */
+#endif
+#ifdef HAVE_NEON
+  /* #### extract properties from the neon_data and add to retval here */
+#endif
+  return retval;
+}
+
+DEFINE_LRECORD_IMPLEMENTATION_WITH_PROPS ("session_handle", /* name */
 			       session_handle,		    /* c_name */
 			       0,			    /* dumpable */
                                mark_session_handle,	    /* marker */
@@ -349,10 +398,10 @@ DEFINE_LRECORD_IMPLEMENTATION ("session_handle",	    /* name */
                                NULL,			    /* equal */
 			       NULL,			    /* hash */
 			       session_handle_description,  /* desc */
-							    /* getprop */
-							    /* putprop */
-							    /* remprop */
-							    /* plist */
+			       session_handle_get,	    /* getprop */
+			       session_handle_put,	    /* putprop */
+			       session_handle_remprop,	    /* remprop */
+			       session_handle_plist,	    /* plist */
 			       Lisp_Session_Handle);        /* structtype */
 
 
@@ -368,22 +417,35 @@ DEFINE_LRECORD_IMPLEMENTATION ("session_handle",	    /* name */
 /*   session-handle-plist						*/
 /************************************************************************/
 
-#ifdef EXPOSE_RAW_SESSION_HANDLE
-/* #### currently disabled; don't forget to do something about parsing
-   URIs if neon is unavailable! */
-DEFUN ("make-session-handle", make_session_handle, 1, 3, 0, /*
+DEFUN ("make-session-handle", Fmake_session_handle, 1, 2, 0, /*
 Return a session handle for URL.
 URL is a string, which must be a known URI scheme.  The 5-part schemes
 defined by RFC 2396 (scheme://authinfo@host:port/path) are always OK.
 Optional argument CODESYS is the coding system (an object or symbol, default
 UTF-8) used to encode URL.  URL must not be URL-encoded; that will be done
 automatically.
-Optional argument PLIST is a property list.  These properties are set on
-the session handle.
 
-#### This interface may change to (&rest PLIST).
+Use `session-handle-p' to check whether an object is a session handle, and
+`session-handle-live-p' to determine whether it currently is associated
+with a transport \(and possibly an open connection, depending on protocol).
+\(The semantics of `session-handle-live-p' need to be refined.)
+
+Session handles support the property interface \(`put', `get', `remprop', and
+`object-plist').  The following properties are predefined and may not be set
+or removed by `put' or `remprop':
+    `url'			the initial URL
+    `last-response-status'	the protocol status of the response to the
+				last request
+    `last-response-headers'	the protocol headers from the response to the
+				last request
+The following properties are predefined and currently cannot be set or
+removed, but may be extended in the future:
+    `transport'			the module used to handle connections \(`curl'
+				and `neon' are implemented, others may be)
+    `coding-system'		the coding system used to encode URLs and
+				paths to resources
 */
-       (url, codesys, plist))
+       (url, codesys))
 {
   Lisp_Session_Handle *session_handle = allocate_session_handle ();
 
@@ -392,51 +454,11 @@ the session handle.
   CHECK_CODING_SYSTEM (codesys);
   session_handle->coding_system = codesys;
 
-  /* Do all sanity checking *before* the plist because someday we will be
-     initializing handle options from the plist. */
   CHECK_STRING (url);
   session_handle->url = url;
 
-#ifdef HAVE_NEON
-  {
-    char *ru = NEW_LISP_STRING_TO_EXTERNAL (url, codesys);
-    ne_uri u;
-    /* #### test whether this auto-url-escapes */
-    if (ne_uri_parse (ru, &u))
-      signal_error (Qio_error, "session handle: couldn't parse URL", url);
-    /* maybe this can default to file? */
-    if (!u.scheme)
-      signal_error (Qio_error, "session handle: no scheme in URL", url);
-    /* maybe this can default to localhost? */
-    if (!u.host)
-      signal_error (Qio_error, "session handle: no host in URL", url);
-    if (!u.port)
-      u.port = ne_uri_defaultport (u.scheme);
-    if (!u.port)
-      signal_error (Qio_error,
-		    "session handle: could not determine port for URL",
-		    url);
-    ne_uri_free (&u);
-  }
-#else
-# error we currently require libneon to parse uris
-#endif
-
-  /* skeleton - currently simply copies the plist
-     This has the side effect of checking well-formedness.  We may want
-     to handle some properties specially. */
-  session_handle->property_list = Qnil;
-  {
-    EXTERNAL_PROPERTY_LIST_LOOP_3(key, value, plist)
-      {
-	session_handle->property_list =
-	  cons3 (key, value, session_handle->property_list);
-      }
-  }
-
   return wrap_session_handle (session_handle);
 }
-#endif
 
 /* ###autoload */
 DEFUN ("session-handle-p", Fsession_handle_p, 1, 1, 0, /*
@@ -447,47 +469,13 @@ Return t if OBJECT is a SESSION_HANDLE connection.
   return SESSION_HANDLEP (object) ? Qt : Qnil;
 }
 
-DEFUN ("session-handle-transport", Fsession_handle_transport, 1, 1, 0, /*
-Return the transport of SESSION-HANDLE, a symbol.
-*/
-       (session_handle))
-{
-  CHECK_SESSION_HANDLE (session_handle);
-  return XSESSION_HANDLE (session_handle)->transport;
-}
-
 DEFUN ("session-handle-live-p", Fsession_handle_live_p, 1, 1, 0, /*
 Return non-nil if SESSION_HANDLE is an active SESSION_HANDLE connection.
 */
        (session_handle))
 {
   CHECK_SESSION_HANDLE (session_handle);
-  return Fsession_handle_transport (session_handle);
-}
-
-/* #### need sane property handling!
-   session-handle-put, session-handle-get */
-
-DEFUN ("session-handle-plist", Fsession_handle_plist, 1, 1, 0, /*
-Return the property list of SESSION-HANDLE.
-*/
-       (session_handle))
-{
-  Lisp_Object retval;
-  Lisp_Session_Handle *s;
-
-  CHECK_SESSION_HANDLE (session_handle);
-  s = XSESSION_HANDLE (session_handle);
-
-  retval = s->property_list;
-#ifdef HAVE_CURL
-  /* #### extract properties from the curl_handle and add to retval here */
-#endif
-#ifdef HAVE_NEON
-  retval = cons3 (Qlast_response_headers, s->last_response_headers, retval);
-  retval = cons3 (Qlast_response_status, s->last_response_status, retval);
-#endif
-  return retval;
+  return Fget (session_handle, Qtransport);
 }
 #endif /* !HAVE_EARL */
 
@@ -498,83 +486,48 @@ Return the property list of SESSION-HANDLE.
 /*   neon-make-session-handle						*/
 /************************************************************************/
 
-DEFUN ("neon-make-session-handle", Fneon_make_session_handle, 1, 4, 0, /*
+#ifndef LAZY_INITIALIZATION_IN_REQUEST
+DEFUN ("neon-make-session-handle", Fneon_make_session_handle, 1, 2, 0, /*
 Return a neon session for URL, wrapped in a session handle.
-URL is a string, which must be a URI scheme known to neon.
-Optional argument METHOD, if present, will be used to create a request.
-Optional argument CODESYS is used to encode URL.  URL must not be
-URL-encoded; that will be done automatically.
-Optional argument PLIST is a property list.  These properties are set on
-the neon handle.
+URL is a string, which must be a URI scheme known to neon.  Any path
+  component (as defined in RFC 2396) will be ignored.
+Optional argument CODESYS (default `utf-8') is used to encode URL.
+URL must not be URL-encoded; that will be done automatically.
 
-#### This interface may change to (&rest PLIST).
-
-#### This is not called "make-neon-handle" because a more general module,
-which will call this function, is planned.  That will call this function
-from a function `make-session-handle'.
+#### This API may go away in favor of the generic `make-session-handle'
+with lazy initialization of neon-specific session attributes in
+`neon-request-create'.
 */
-       (url, method, codesys, plist))
+       (url, codesys))
 {
-  Lisp_Session_Handle *session_handle = allocate_session_handle ();
+  /* validates URL and CODESYS */
+  Lisp_Object session = Fmake_session_handle (url, codesys);
+  Lisp_Session_Handle *handle = XSESSION_HANDLE (session);
 
-  if (NILP (codesys))
-    /* #### Quick hack, should be Qnative? */
-    codesys = Fget_coding_system (Qutf_8);
-  CHECK_CODING_SYSTEM (codesys);
-  session_handle->coding_system = codesys;
-
-  /* Do this *before* the plist because later we will be initializing
-     neon_handle options from the plist. */
-  CHECK_STRING (url);
-  if (! NILP(method)) CHECK_STRING (method);
-
+  /* neon-specific
+     #### maybe all of this can be done lazily in neon-request-create? */
   {
     ne_uri u;
-    Extbyte *ru = NEW_LISP_STRING_TO_EXTERNAL (url, codesys);
-    session_handle->state = Fmake_vector (make_int (NEON_STATE_SIZE), Qnil);
+    Extbyte *ru = NEW_LISP_STRING_TO_EXTERNAL (url, handle->coding_system);
     if (ne_uri_parse (ru, &u))
       signal_error (Qio_error, "neon: couldn't parse URL", url);
     if (!u.scheme)
       signal_error (Qio_error, "neon: no scheme in URL", url);
     if (!u.host)
       signal_error (Qio_error, "neon: no host in URL", url);
-    if (!u.port)
-      u.port = ne_uri_defaultport (u.scheme);
-    if (!u.port)
+    if (!u.port && !(u.port = ne_uri_defaultport (u.scheme)))
       signal_error (Qio_error, "neon: could not determine port for URL", url);
 
-    /* neon-specific */
-    session_handle->transport = Qneon;
-    session_handle->neon = allocate_neon_data ();
-    session_handle->neon->session =
-      ne_session_create (u.scheme, u.host, u.port);
-    if (!NILP (method))
-      {
-	if (!u.path)
-	  invalid_argument ("neon: can't create a request without a path",
-			    url);
-	session_handle->neon->request =
-	  ne_request_create (session_handle->neon->session,
-			     NEW_LISP_STRING_TO_EXTERNAL (method, codesys),
-			     u.path);
-      }
+    handle->neon = allocate_neon_data ();
+    handle->neon->session = ne_session_create (u.scheme, u.host, u.port);
     ne_uri_free (&u);
   }
+  handle->state = Fmake_vector (make_int (NEON_STATE_SIZE), Qnil);
+  handle->transport = Qneon;
 
-  /* skeleton - currently simply copies the plist
-     This has the effect of checking well-formedness, and we may want
-     to handle some properties specially. */
-  session_handle->property_list = Qnil;
-  {
-    EXTERNAL_PROPERTY_LIST_LOOP_3(key, value, plist)
-      {
-	session_handle->property_list =
-	  cons3 (key, value, session_handle->property_list);
-      }
-  }
-
-  return wrap_session_handle (session_handle);
+  return wrap_session_handle (handle);
 }
+#endif
 
 /************************************************************************/
 /*			   Session authentication			*/
@@ -626,16 +579,18 @@ If non-nil, SERVER_CB and PROXY_CB must be funcallables which take exactly
 two arguments, a string REALM and an integer ATTEMPT, and return a cons of
 two strings.  REALM is the HTTP authentication realm, and ATTEMPT counts
 the tries for authentication made.  The car of the return value is
-interpreted as the username and the cdr as the password.
+interpreted as the username and the cdr as the password.  Both are treated
+as binary data.
 
 WARNING: This function clears any previous authentication methods, so if
 you need both server authentication and proxy authentication, you must set
-both in a single call.  (This is not a bug, it is a limitation of libneon.)
+both in a single call.  \(This is not a bug in XEmacs, it is a limitation of
+libneon.)
 
 This function is a no-op if both callbacks are nil.  Use `neon-forget-auth'
 to clear all credentials without resetting them.
 
-Returns no useful value (currently, nil).
+Returns no useful value \(nil).
 */
        (session, server_cb, proxy_cb))
 {
@@ -1083,7 +1038,7 @@ then URL-encoded internally.  CODESYS defaults to `utf-8'.
 /* low-level request handling */
 
 DEFUN ("neon-request-create", Fneon_request_create, 3, 4, 0, /*
-Add a request to session handle SESSION using METHOD on PATH.
+Create a request for session handle SESSION using METHOD on PATH.
 Optional CODESYS is used to encode the strings METHOD and PATH.
 CODESYS defaults to `utf-8'.
 If SESSION already has an associated request, it is destroyed, and any
@@ -1093,14 +1048,37 @@ response status and headers are cleared.  Returns SESSION.
 {
   Lisp_Session_Handle *s;
 
+  CHECK_STRING (method);
+  CHECK_STRING (path);
   CHECK_SESSION_HANDLE (session);
   s = XSESSION_HANDLE (session);
+
+#ifdef LAZY_INITIALIZATION_IN_REQUEST
+  if (NILP (s->transport))
+    {
+      ne_uri u;
+      Extbyte *ru = NEW_LISP_STRING_TO_EXTERNAL (url, s->coding_system);
+      if (ne_uri_parse (ru, &u))
+	signal_error (Qio_error, "neon couldn't parse URL", url);
+      if (!u.scheme)
+	signal_error (Qio_error, "no scheme in URL", url);
+      if (!u.host)
+	signal_error (Qio_error, "no host in URL", url);
+      if (!u.port && !(u.port = ne_uri_defaultport (u.scheme)))
+	signal_error (Qio_error, "could not determine port for URL", url);
+
+      s->neon = allocate_neon_data ();
+      s->neon->session = ne_session_create (u.scheme, u.host, u.port);
+      ne_uri_free (&u);
+      s->state = Fmake_vector (make_int (NEON_STATE_SIZE), Qnil);
+      s->transport = Qneon;
+    }
+#endif
+
   if (s->transport != Qneon)
     wtaerror ("not a neon session", session);
   if (s->neon == NULL || s->neon->session == NULL)
-    invalid_state ("neon session not initialited", session);
-  CHECK_STRING (method);
-  CHECK_STRING (path);
+    invalid_state ("neon session not initialized", session);
   if (NILP (codesys))
     codesys = Fget_coding_system (Qutf_8);
   else
@@ -1110,10 +1088,11 @@ response status and headers are cleared.  Returns SESSION.
     Extbyte *m = NEW_LISP_STRING_TO_EXTERNAL (method, codesys);
     Extbyte *p = NEW_LISP_STRING_TO_EXTERNAL (path, codesys);
 
-    /* #### finalization should be done in neon-request-dispatch */
+    /* we can't be sure a neon-request-dispatch was done */
     if (s->neon->request)
       ne_request_destroy (s->neon->request);
     s->neon->request = ne_request_create (s->neon->session, m, p);
+    /* clear results of last request */
     s->last_response_headers = Qnil;
     s->last_response_status = Qnil;
 #ifdef HAVE_NEON_0_24_7
@@ -1202,10 +1181,12 @@ be hideous if it were UTF-8!)  (Verified for libneon 0.24.7.)
   if (BUFFERP (reader))
     {
       struct buffer *buf = XBUFFER(reader);
+      /* #### maybe neon_write_lstream could do this lazily? */
       Lisp_Object b = make_lisp_buffer_output_stream (buf, buf->bufpt,
 						      LSTR_ALLOW_QUIT);
       Lisp_Object c = make_coding_output_stream (XLSTREAM (b), codesys,
 						 CODING_DECODE, 0);
+      /* #### if we make this a cons of b and c we can delete the lstreams */
       Faset (r->state, make_int (READER_LSTREAM), c);
       ne_add_response_body_reader (neon, accept_filter,
 				   &neon_write_lstream, (void *) c);
@@ -1242,7 +1223,7 @@ Give neon request REQUEST the string BODY as the message body.
 Optional CODESYS, default `utf-8' is used to encode BODY.
 Returns nil.
 
-Yes, of course BODY should take a string or buffer.  Send money!
+Yes, of course BODY should be allowed to be a buffer.  Send money!
 */
        (request, body, codesys))
 {
@@ -1313,8 +1294,9 @@ the response to HTTP GET, or an "XML parse tree" from WebDAV PROPFIND.  (The
 
 The `last-response-headers' and `last-response-status' properties are set
 on the request \(session) object.  The value of the `last-response-headers'
-property is a list of strings, each header being given as a single string.
-\(#### Will change to an alist for convenient access to specific headers.)
+property is a pseudo-plist with header tags as keys and contents as values.
+\(This is not a true plist, since keys are strings and there can be any
+number of headers with the same tag.)
 The value of the `last-response-status' property is a vector containing
 the major version and the minor version of the HTTP server implementation,
 the response code, the class \(code / 100) of the code, and the reason
@@ -1337,7 +1319,7 @@ phrase \(five elements) in that order.
 
     code = ne_request_dispatch (neon);
     r->last_response_status = neon_prepare_http_status (neon);
-#ifdef HAVE_NEON_0_25_4
+#ifdef NEON_USES_HEADER_ITERATE
     /* #### this may not be the right place for this */
     {
       void *cur = NULL;
@@ -1483,16 +1465,17 @@ neon_prepare_depth (Lisp_Object depth, int kidz_ok)
   return d;
 }
 
-#if 0
-/* Storing an HTTP status result */
-typedef struct {
-    int major_version;
-    int minor_version;
-    int code; /* Status-Code value */
-    int klass; /* Class of Status-Code (1-5) */
-    char *reason_phrase;
-} ne_status;
-#endif
+/*
+  definition of ne_status
+
+  typedef struct {
+      int major_version;
+      int minor_version;
+      int code; // Status-Code value
+      int klass; // Class of Status-Code (1-5)
+      char *reason_phrase;
+  } ne_status;
+*/
 
 static Lisp_Object
 neon_prepare_http_status (ne_request *neon)
@@ -1522,28 +1505,42 @@ neon_write_lstream (void *stream, const char *data, size_t count)
   else
     {
       Lstream_close (s);
-      /* Lstream_delete (s); */
     }
 #endif
   /* #### can we fail in a detectable way? */
   return 0;
 }
 
-#ifdef HAVE_NEON_0_24_7
-/* ... and maybe other older neons;
+#ifdef NEON_USES_HEADER_CATCHER
+/* ... in neon 0.24.7 and maybe other older neons;
    this interface is gone in neon 0.25.4. */
 /* Header catchers receive the whole header.
-   userdata will be a pointer to a Lisp object containing a list of strings. */
+   userdata will be a pointer to a Lisp object containing a list of strings.
+   #### UNTESTED! */
 static void
 neon_header_catcher (void *userdata, const char *value)
 {
+  char *s1, *s2;
   Lisp_Object *lp = (Lisp_Object *) userdata;
-  Lisp_Object v = build_ext_string (value, Qbinary);
+  Lisp_Object tag, contents;
   struct gcpro gcpro1;
 
-  GCPRO1 (v);
-  *lp = Fcons (v, *lp);
-  UNGCPRO;
+  /* don't use ne_token and ne_shave because they either do evil things
+     with the strings or allocate */
+  /* #### does this implement RFC 2822 WS? */
+  s2 = s1 = strchr (value, ':');
+  /* retreat s2 until it hits a non-space */
+  for (s2-- ; s2 > value && (*s2 == ' ' || *s2 == '\t'); s2--) /* empty */ ;
+  tag = make_ext_string (value, s2 - value + 1, Qbinary);
+
+  /* advance s1 until it hits a non-space */
+  for (s1++ ; *s1 && (*s1 == ' ' || *s1 == '\t'); s1++) /* empty */ ;
+  /* retreat s2 until it hits a non-space */
+  s2 = s1 + strlen (s1);
+  for (s2-- ; s2 > s1 && (*s2 == ' ' || *s2 == '\t'); s2--) /* empty */ ;
+  contents = make_ext_string (s1, s2 - s1 + 1, Qbinary);
+
+  *lp = cons3 (tag, contents, *lp);
 }
 #endif
 
@@ -1787,6 +1784,8 @@ syms_of_neon_api ()
   DEFSYMBOL (Qtransport);
   DEFSYMBOL (Qlast_response_headers);
   DEFSYMBOL (Qlast_response_status);
+  DEFSYMBOL (Qcoding_system);
+  DEFSYMBOL (Qurl);
 #endif
 }
 
@@ -1865,6 +1864,8 @@ unload_neon_api ()
   /* predicate special handling */
   unstaticpro_nodump (&Qsession_handlep);
   unstaticpro_nodump (&Qsession_handle_livep);
+  unstaticpro_nodump (&Qurl);
+  unstaticpro_nodump (&Qcoding_system);
 #endif
 }
 #endif

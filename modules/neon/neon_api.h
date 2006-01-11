@@ -92,8 +92,9 @@ struct Lisp_Session_Handle
      This could be used to maintain state for a handler based on url.el or
      an external process (eg, wget). */
   Lisp_Object url;
-  /* #### the transport-specific handles may want to be a union */
-  /* type of the handle; READ-ONLY from Lisp */
+  /* type of the handle; READ-ONLY from Lisp
+     TRANSPORT currently is used as a flag for liveness; it must be reset
+     to nil if the handle can no longer be used by that transport */
   Lisp_Object transport;
   Lisp_Object property_list;
   /* the coding system used to convert url; READ-ONLY from Lisp */
@@ -104,23 +105,7 @@ struct Lisp_Session_Handle
   Lisp_Object stuff;
   Lisp_Object last_response_status;
   Lisp_Object last_response_headers;
-  /* URI parsed according to RFC 2396
-     #### how does this relate to redirects, etc?
-     #### should this move to the big_ball_of_strings? */
-  Extbyte     *scheme;
-  Extbyte     *userinfo;
-  Extbyte     *host;
-  unsigned int port;
-  Extbyte     *path;		/* do NOT url-escape until on the wire */
-#if 0
-  /* the URL string in external format
-     libcurl expects the caller to allocate storage and clean it up.
-     #### How about libneon?  Considering libneon suggests that this should
-     be parsed into a struct (this is standardized and libneon follows the
-     standard), and a method providing for generating the URL.
-     #### If not, this will eventually move to the big_ball_of_strings. */
-  Extbyte *url;
-#endif
+  /* #### the transport-specific handles may want to be a union */
   /* These could be a linked list of low-level-module-specific structures.
      Actually, a single session_handle->handler_info member to be cast to
      `TRANSPORT_handler_info *' should be enough, since we know the transport.
