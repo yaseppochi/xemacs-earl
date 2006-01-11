@@ -325,7 +325,7 @@ static size_t curl_write_function (void *data, size_t size, size_t nmemb,
 DEFUN ("curl-easy-perform", Fcurl_easy_perform, 1, 2, 0, /*
 Read from the URL represented by HANDLE into BUFFER at point.
 Optional BUFFER defaults to the current buffer.
-Returns t.  
+Returns t.
 */
        (handle, buffer))
 {

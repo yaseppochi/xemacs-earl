@@ -2,89 +2,30 @@
 
 ;; Copyright (C) 2006  Stephen J. Turnbull
 
+;;; Commentary
+
 ;; To configure, edit the file "neon-test-user.el".  A sample implementation
-;; is provided as "neon-test-sample-user.el".
+;; is provided as "neon-test-sample-user.el".  Note that you must `provide'
+;; `neon-test-user', since the file is loaded via `require'.
 
 ;; This file also contains a LISP emulation of the algorithms used in the
 ;; callbacks in the C code.
 
-(unless (require 'neon-api "neon_api" 'no-error)
-  (require 'neon-api "neon/neon_api"))
+;;; Code
+
+(unless (require 'neon "neon" 'no-error)
+  (require 'neon "neon/neon"))
 
 (require 'neon-test-user (expand-file-name "neon-test-user"))
-;(setq test-path "/Blogs/Software/TestWebDAVPage")
-;(setq test-path "/Blogs/Software/FrontPage")
-;(setq test-path "/toolbar.el-xemacs-19.11")
+
+;; Variables
 
 (defvar neon-parses nil
   "Stack of recent webdav-xml parse trees computed.")
 
-(defconst neon-http-methods '("HEAD" "GET" "PUT" "POST"))
-
-(defconst neon-webdav-methods
-  '("DELETE" "MKCOL" "COPY" "MOVE" "PROPFIND" "PROPPATCH" "LOCK"))
-
-;; Sample WebDAV XML PROPFIND requests
-
-(defconst allprop-xml
-  (concat "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n"
-	  "<D:propfind xmlns:D=\"DAV:\">\n"
-	  "  <D:allprop />\n"
-	  "</D:propfind>\n")
-  "An XML request for all properties on the resource.")
-
-(defconst sourceprop-xml
-  (concat "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n"
-	  "<D:propfind xmlns:D=\"DAV:\">\n"
-	  "  <D:prop>\n"
-	  "    <D:source />\n"
-	  "  </D:prop>\n"
-	  "</D:propfind>\n")
-  "An XML request for all properties on the resource.")
-
-;; Useful utilities
-;; #### refactor these functions!
-
-(defun neon-parse-coalesce-cdata (parse)
-  "Return a copy of PARSE with adjacent cdata terms merged.
-PARSE is a LISPy version of a neon WebDAV XML response.
-Should be applied before `neon-parse-clean-whitespace'.
-
-libneon doesn't coalesce adjacent cdata into a single cdata (in fact it
-seems to always return vertical whitespace as a separate component) from
-other whitespace or text.  It also doesn't bother to coalesce across
-internal buffer boundaries, so a word may be split in the middle:
-  \"[...1018 characters]<el>word</el>\"
-will result in \"word\" being split into \"wo\" and \"rd\"."
-  (let ((result '()))
-    (while parse
-      (cond ((listp (car parse))
-	     (push (neon-parse-coalesce-cdata (car parse)) result))
-	    ((stringp (car parse))
-	     (let ((cdata (list (car parse))))
-	       (while (stringp (cadr parse))
-		 (push (cadr parse) cdata)
-		 (setq parse cdr parse))
-	       (push (apply #'concat (nreverse cdata)) result)))
-	    (t (push (car parse) result)))
-      (setq parse (cdr parse)))
-    (nreverse result)))
-
-(defun neon-parse-clean-whitespace (parse)
-  "Return a copy of PARSE with whitespace-only cdata terms removed from it.
-PARSE is a LISPy version of a neon WebDAV XML response."
-  (let ((result '()))
-    (while parse
-      (cond ((listp (car parse))
-	     (push (neon-parse-clean-whitespace (car parse)) result))
-	    ((and (stringp (car parse))
-		  (string-match "^[ \t\n]*$" (car parse)))
-	     nil)			; do nothing
-	    (t (push (car parse) result)))
-      (setq parse (cdr parse)))
-    (nreverse result)))
-
 ;; The workhorse functions
+
+;; #### These aren't quite ready for prime time (neon.el), but they're close.
 
 (defun neon-request-test-buffer-name (session path method reader
 				      &optional accepter body auth)
@@ -139,7 +80,7 @@ Optional AUTH is a boolean indicating whether a authentication callback was
 	    (insert (format "%S" response)))
 	  buf)				; normal function return value
       (error
-       (warn "neon request failed in %s\nwith conditions: %s\n%s"
+       (warn "neon request %s\nwith conditions: %s\n%s"
 	     bufname
 	     (car info)
 	     (cdr info))))))		; returns nil
@@ -151,23 +92,32 @@ Optional AUTH is a boolean indicating whether a authentication callback was
 
 ;; (defun neon-request-test (session path method reader
 ;;			     &optional accepter body auth)
-(neon-request-test mh test-path "HEAD" 'raw 'accept-always nil nil)
-
-(neon-request-test mh test-path "GET"  'raw 'accept-always nil nil)
+(neon-request-test mh test-path "OPTIONS"  'raw 'accept-always nil nil)
+(save-excursion
+  (set-buffer (neon-request-test-buffer-name
+	           mh test-path "OPTIONS"  'raw 'accept-always nil nil))
+  (goto-char (point-max))
+  (insert "\n")
+  (let ((response-headers (plist-get (session-handle-plist mh)
+				     'last-response-headers)))
+    (while response-headers
+      (insert (format "%S %S\n"
+		      (car response-headers) (cadr response-headers)))
+      (setq response-headers (cddr response-headers)))))
+(neon-request-test mh test-path "HEAD"     'raw 'accept-always nil nil)
+(neon-request-test mh test-path "GET"      'raw 'accept-always nil nil)
 
 ;; set authentication for the WebDAV tests
-(neon-session-set-auth mh #'blogkami-auth-cb nil)
-
+(neon-session-set-auth mh #'test-auth-cb nil)
+(neon-request-test mh test-path "PROPFIND" 'raw 'accept-always nil nil)
 (neon-request-test mh test-path "PROPFIND"
-		   'raw        'accept-always nil            nil)
+		   'raw        'accept-always webdav-sourceprop-xml nil)
 (neon-request-test mh test-path "PROPFIND"
-		   'raw        'accept-always sourceprop-xml nil)
+		   'webdav-xml 'accept-always webdav-allprop-xml    nil)
 (neon-request-test mh test-path "PROPFIND"
-		   'webdav-xml 'accept-always allprop-xml    nil)
+		   'webdav-xml 'accept-always webdav-sourceprop-xml nil)
 (neon-request-test mh test-path "PROPFIND"
-		   'webdav-xml 'accept-always sourceprop-xml nil)
-(neon-request-test mh test-path "PROPFIND"
-		   'webdav-xml 'accept-2xx    allprop-xml    nil)
+		   'webdav-xml 'accept-2xx    webdav-allprop-xml    nil)
 
 ;; For easy access to the various results
 (list-buffers)

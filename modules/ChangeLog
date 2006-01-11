@@ -1,3 +1,27 @@
+2006-01-11  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* neon/.cvsignore:
+	* neon/configure.ac:
+	* neon/Makefile.in.in:
+	* neon/install-sh:
+	* neon/neon_api.h:
+	* neon/neon_api.c:
+	* neon/neon.el:
+	* neon/neon-test.el:
+	* neon/neon-test-sample-user.el:
+	Initial implementation of libneon LISP wrapping.
+
+2006-01-11  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* curl/.cvsignore:
+	* curl/configure.ac:
+	* curl/Makefile.in.in:
+	* curl/install-sh:
+	* curl/curl_api.h:
+	* curl/curl_api.c:
+	* curl/curl-test.el:
+	Initial implementation of cURL LISP wrapping.
+
 2005-11-16  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* canna/canna_api.c: Small fixes to Mule-ization patch.

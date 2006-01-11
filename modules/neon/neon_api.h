@@ -25,6 +25,9 @@
  * destroy it at the appropriate time.
  */
 
+#ifdef HAVE_EARL
+#include "earl.h"
+#endif
 #include <neon/ne_request.h>	/* include ne_session.h,
 				   ne_utils.h, ne_string.h,
 				   ne_defs.h, ne_ssl.h, ne_uri.h */
@@ -50,12 +53,34 @@
    These are the access indicies. */
 enum neon_state_index {
   READER = 0,			/* r/o; typically buffer or symbol */
-  RESPONSE = 1,			/* r/w; this is the return value */
-  CURRENT = 2,			/* used by the XML body reader */
-  CODING_SYSTEM = 3,		/* used by the XML body reader */
-  MAX_USER_DATA_LENGTH = 4
+  RESPONSE,			/* r/w; this is the return value */
+  CURRENT,			/* used by the XML body reader */
+  CODING_SYSTEM,		/* used by the XML body reader */
+  READER_LSTREAM,		/* user by the buffer body reader */
+  SERVER_CB,			/* server authentication callback */
+  PROXY_CB,			/* proxy authentication callback */
+  NEON_STATE_SIZE
 };
 
+struct neon_data {
+  /* storage for the neon session */
+  ne_session *session;
+  /* the neon request used by the libneon API */
+  ne_request *request;
+  /* neon sucks... */
+  ne_xml_parser *parser;
+};
+
+#if 0 /* not needed? */
+DECLARE_LRECORD (neon_data, Lisp_Neon_Data);
+#define XNEON_DATA(x) XRECORD (x, neon_data, Lisp_Neon_Data)
+#define wrap_neon_data(p) wrap_record (p, neon_data)
+#define NEON_DATAP(x) RECORDP (x, neon_data)
+#define CHECK_NEON_DATA(x) CHECK_RECORD (x, neon_data)
+#define CONCHECK_NEON_DATA(x) CONCHECK_RECORD (x, neon_data)
+#endif
+
+#ifndef HAVE_EARL
 /* This is Session_Handle, not Neon_Handle, because a generalization is
    planned. */
 struct Lisp_Session_Handle
@@ -66,9 +91,10 @@ struct Lisp_Session_Handle
      READ-ONLY from Lisp?
      This could be used to maintain state for a handler based on url.el or
      an external process (eg, wget). */
-  /* #### the type-specific handles may want to be a union */
+  Lisp_Object url;
+  /* #### the transport-specific handles may want to be a union */
   /* type of the handle; READ-ONLY from Lisp */
-  Lisp_Object type;
+  Lisp_Object transport;
   Lisp_Object property_list;
   /* the coding system used to convert url; READ-ONLY from Lisp */
   Lisp_Object coding_system;
@@ -78,6 +104,15 @@ struct Lisp_Session_Handle
   Lisp_Object stuff;
   Lisp_Object last_response_status;
   Lisp_Object last_response_headers;
+  /* URI parsed according to RFC 2396
+     #### how does this relate to redirects, etc?
+     #### should this move to the big_ball_of_strings? */
+  Extbyte     *scheme;
+  Extbyte     *userinfo;
+  Extbyte     *host;
+  unsigned int port;
+  Extbyte     *path;		/* do NOT url-escape until on the wire */
+#if 0
   /* the URL string in external format
      libcurl expects the caller to allocate storage and clean it up.
      #### How about libneon?  Considering libneon suggests that this should
@@ -85,26 +120,23 @@ struct Lisp_Session_Handle
      standard), and a method providing for generating the URL.
      #### If not, this will eventually move to the big_ball_of_strings. */
   Extbyte *url;
+#endif
   /* These could be a linked list of low-level-module-specific structures.
      Actually, a single session_handle->handler_info member to be cast to
-     `TYPE_handler_info *' should be enough, since we know the type.  This
-     would allow resetting type, too. */
+     `TRANSPORT_handler_info *' should be enough, since we know the transport.
+     This would allow resetting transport, too. */
 #ifdef HAVE_CURL
   /* the curl handle used by the libcurl API */
   CURL *curl_handle;
 #endif
 #ifdef HAVE_NEON
-  /* the neon request used by the libneon API */
-  ne_request *neon_request;
-  /* neon sucks... */
-  ne_xml_parser *neon_parser;
-  /* storage for the neon session, when the neon_request is invalid */
-  ne_session *neon_session;
+  struct neon_data* neon;
 #endif
   /* #### UNIMPLEMENTED array of pointers to string data we need to free */
   Dynarr *big_ball_of_strings;
 };
 typedef struct Lisp_Session_Handle Lisp_Session_Handle;
+#endif
 
 DECLARE_LRECORD (session_handle, Lisp_Session_Handle);
 #define XSESSION_HANDLE(x) XRECORD (x, session_handle, Lisp_Session_Handle)
