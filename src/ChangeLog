@@ -1,3 +1,8 @@
+2006-01-11  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* objects-x.c (x_finalize_font_instance): Add trace of apparently
+	hosed debug messages.
+
 2005-11-18  Aidan Kehoe  <kehoea@parhasard.net>
 
 	* window.c (change_window_height): Have change_window_height

@@ -493,6 +493,35 @@ x_finalize_font_instance (Lisp_Font_Instance *f)
 {
 
 #ifdef USE_XFT
+  /* #### Urk, this function seems to get called inappropriately.  MC_ALLOC
+     issue?  Cf. this output.  The "finalizing" lines are from the following
+     DEBUG_XFT1():
+
+     intialized metrics ascent 16 descent 4 width 10 height 19
+     initialized font Bitstream Vera Sans Mono-12:familylang=en:style=Bold:stylelang=en:slant=0:weight=200:pixelsize=16.6667:foundry=bitstream:hintstyle=3:outline=True:scalable=True:dpi=100:fontformat=TrueType
+     checking if Bitstream Vera Sans Mono-12:hintstyle=3 handles English
+     Xft font Bitstream Vera Sans Mono-12:hintstyle=3 supports en
+     initialized metrics ascent 16 descent 4 width 10 height 19
+     initialized font Bitstream Vera Sans Mono-12:style=Oblique:slant=100:weight=100:pixelsize=16.6667:hintstyle=3:outline=True:scalable=True:dpi=100
+     finalizing -region
+     finalizing -*-helvetica-medium-r-*-*-*-240-*-*-*-*-*-*
+     finalizing -*-helvetica-medium-r-*-*-*-*-*-*-*-*-*-*
+     finalizing -*-courier-medium-r-*-*-*-*-*-*-*-*-*-*
+     finalizing he variable `font-latex-match-type-declaration'.
+     finalizing -*-helvetica-medium-r-*-*-*-350-*-*-*-*-*-*
+     finalizing xp
+     finalizing -*-helvetica-medium-r-*-*-*-290-*-*-*-*-*-*
+
+     I don't know where this next crap comes from, or whether it's an XEmacs
+     problem or just typical GNOME braindamage.  I suspect that Metacity or
+     one of its components is monitoring font usage.  Xft should have nothing
+     to do with Pango per se.
+
+     Window manager warning: Log level 16: Two different plugins tried to register 'BasicEngineFc'.
+     Window manager warning: Log level 8: g_object_new: assertion `G_TYPE_IS_OBJECT (object_type)' failed
+     Failed to load Pango module for id: 'BasicScriptEngineFc'    
+  */
+
   DEBUG_XFT1 (0, "finalizing %s\n", (STRINGP (f->name)
 				   ? (char *) XSTRING_DATA (f->name)
 				   : "(unnamed font)"));
