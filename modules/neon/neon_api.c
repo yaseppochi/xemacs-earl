@@ -134,7 +134,7 @@
 
 static Lisp_Object neon_status (int status);
 static Extbyte *neon_prepare_path (Lisp_Object path, Lisp_Object codesys);
-static int neon_prepare_depth (Lisp_Object depth, int kidz_ok);
+static int neon_prepare_depth (Lisp_Object depth);
 static Lisp_Object neon_prepare_http_status (ne_request *neon);
 #ifdef NEON_USES_HEADER_CATCHER
 static void neon_header_catcher (void *userdata, const char *value);
@@ -152,7 +152,7 @@ static int neon_credentials_cb (void *userdata, const char *rlm,
 
 /* Local references to Lisp symbols */
 
-static Lisp_Object Qneon_api, Qneon, Qinfinite, Qwebdav_xml, Qaccept_always,
+static Lisp_Object Qneon_api, Qneon, Qinfinity, Qwebdav_xml, Qaccept_always,
 #ifndef HAVE_EARL
   Qlast_response_headers, Qlast_response_status,
   Qsession_handlep, Qsession_handle_livep, Qtransport,
@@ -882,7 +882,7 @@ then URL-encoded internally.  CODESYS defaults to `utf-8'.
   ne_session *ns = XSESSION_HANDLE (session)->neon->session;
   Extbyte *s = neon_prepare_path (source, codesys);
   Extbyte *t = neon_prepare_path (target, codesys);
-  int d = neon_prepare_depth (depth, 0);
+  int d = neon_prepare_depth (depth);
   int status = ne_copy (ns, (NILP (overwrite) ? 0 : 1), d, s, t);
 
   return neon_status (status);
@@ -1450,14 +1450,14 @@ neon_prepare_path (Lisp_Object path, Lisp_Object codesys)
 }
 
 static int
-neon_prepare_depth (Lisp_Object depth, int kidz_ok)
+neon_prepare_depth (Lisp_Object depth)
 {
   int d;
   if (EQ (depth, make_int (0)))
     d = NE_DEPTH_ZERO;
-  else if (EQ (depth, Qinfinite))
-    d = NE_DEPTH_INFINITE;
-  else if (kidz_ok && EQ (depth, make_int (1)))
+  else if (EQ (depth, Qinfinity))
+    d = NE_DEPTH_INFINITE;	/* arguably more grammatical, but puh-leez */
+  else if (EQ (depth, make_int (1)))
     d = NE_DEPTH_ONE;		/* not used by WebDAV COPY */
   else
     signal_error (intern ("args-out-of-range"), "invalid WebDAV depth", depth);
@@ -1765,7 +1765,7 @@ syms_of_neon_api ()
   /* neon-specific symbols. */
   DEFSYMBOL (Qneon_api);	/* feature symbol */
   DEFSYMBOL (Qneon);
-  DEFSYMBOL (Qinfinite);
+  DEFSYMBOL (Qinfinity);
   DEFSYMBOL (Qwebdav_xml);
   DEFSYMBOL (Qaccept_always);
   DEFSYMBOL (Qaccept_2xx);
@@ -1846,7 +1846,7 @@ unload_neon_api ()
 
   unstaticpro_nodump (&Qneon_api);
   unstaticpro_nodump (&Qneon);
-  unstaticpro_nodump (&Qinfinite);
+  unstaticpro_nodump (&Qinfinity);
   unstaticpro_nodump (&Qwebdav_xml);
   unstaticpro_nodump (&Qaccept_always);
   unstaticpro_nodump (&Qaccept_2xx);
