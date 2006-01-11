@@ -107,6 +107,7 @@
 #ifdef HAVE_SHLIB
 # include "emodules.h"
 #endif
+#include "file-coding.h"
 #include "lstream.h"
 #include "elhash.h"
 
@@ -120,11 +121,30 @@
 				   ne_utils.h, ne_defs.h, ne_ssl.h,
 				   ne_uri.h, ne_xml.h */
 
-/************************************************************************/
-/*			   Module-specific stuff			*/
-/************************************************************************/
+/* callback declarations */
+
+/* this #define should be in configure if we need it */
+#define HAVE_NEON_0_25_4
+static Lisp_Object neon_status (int status);
+static Extbyte *neon_prepare_path (Lisp_Object path, Lisp_Object codesys);
+static int neon_prepare_depth (Lisp_Object depth, int kidz_ok);
+static Lisp_Object neon_prepare_http_status (ne_request *neon);
+#ifdef HAVE_NEON_0_24_7
+static void neon_header_catcher (void *userdata, const char *value);
+#endif
+static int neon_start_cb (void *userdata, int UNUSED(parent),
+			  const char *nspace, const char *name,
+			  const char **atts);
+static int neon_cdata_cb (void *userdata, int UNUSED(state),
+			  const char *cdata, size_t len);
+static int neon_end_cb (void *userdata, int UNUSED(state),
+			const char *UNUSED(nspace), const char *UNUSED(name));
+static int neon_write_lstream (void *stream, const char *data, size_t count);
+static int neon_credentials_cb (void *userdata, const char *rlm,
+				int at, char *username, char *password);
 
 /* Local references to Lisp symbols */
+
 static Lisp_Object Qneon_api, Qneon, Qinfinite, Qwebdav_xml, Qaccept_always,
 #ifndef HAVE_EARL
   Qlast_response_headers, Qlast_response_status,
@@ -134,8 +154,12 @@ static Lisp_Object Qneon_api, Qneon, Qinfinite, Qwebdav_xml, Qaccept_always,
   Qconnection_failure, Qtimeout, Qgeneric_error;
 
 /************************************************************************/
-/*                  Neon session and request functions        		*/
+/*                   neon-specific structure handling                   */
+/* Contents:								*/
+/*   struct neon_data							*/
+/*   finalize_neon_data							*/
 /************************************************************************/
+
 struct neon_data *allocate_neon_data ()
 {
   return (struct neon_data *) xmalloc (sizeof (struct neon_data));
@@ -167,7 +191,18 @@ void finalize_neon_data (struct neon_data *neon)
 
 #ifndef HAVE_EARL
 /************************************************************************/
-/*                session_handle lrecord basic functions                */
+/*                 session_handle lrecord implementation                */
+/* Contents:								*/
+/*   session_handle_description						*/
+/*   allocate_session_handle						*/
+/*   finalize_session_handle						*/
+/*   mark_session_handle						*/
+/*   print_session_handle						*/
+/*   session_handle_get							*/
+/*   session_handle_put							*/
+/*   session_handle_remprop						*/
+/*   session_handle_plist						*/
+/*   DEFINE_LRECORD_IMPLEMENTATION					*/
 /************************************************************************/
 
 static const struct memory_description session_handle_description [] = {
@@ -183,40 +218,6 @@ static const struct memory_description session_handle_description [] = {
   { XD_LISP_OBJECT, offsetof (struct Lisp_Session_Handle, stuff) },
   { XD_END }
 };
-
-static Lisp_Object
-mark_session_handle (Lisp_Object obj)
-{
-  mark_object (XSESSION_HANDLE (obj)->url);
-  mark_object (XSESSION_HANDLE (obj)->transport);
-  mark_object (XSESSION_HANDLE (obj)->coding_system);
-  mark_object (XSESSION_HANDLE (obj)->last_response_status);
-  mark_object (XSESSION_HANDLE (obj)->last_response_headers);
-  mark_object (XSESSION_HANDLE (obj)->property_list);
-  mark_object (XSESSION_HANDLE (obj)->state);
-  return XSESSION_HANDLE (obj)->stuff;
-}
-
-static void
-print_session_handle (Lisp_Object obj,
-		  Lisp_Object printcharfun,
-		  int UNUSED (escapeflag))
-{
-  Lisp_Session_Handle *session_handle = XSESSION_HANDLE (obj);
-
-  /* #### we should be able to do better */
-  if (print_readably)
-    printing_unreadable_object ("#<session_handle>");
-
-  write_c_string (printcharfun, "#<session_handle ");
-  if (NILP(session_handle->transport))
-    write_c_string (printcharfun, "(dead) ");
-  else
-    write_fmt_string_lisp (printcharfun, "%S ", 1, session_handle->transport);
-  if (session_handle->url)
-    write_fmt_string_lisp (printcharfun, "%S", 1, session_handle->url);
-  write_fmt_string (printcharfun, " 0x%lx>", (unsigned long) session_handle);
-}
 
 static Lisp_Session_Handle*
 allocate_session_handle (void)
@@ -278,6 +279,40 @@ finalize_session_handle (void *header, int for_disksave)
   session_handle->path = NULL;
 }
 
+static Lisp_Object
+mark_session_handle (Lisp_Object obj)
+{
+  mark_object (XSESSION_HANDLE (obj)->url);
+  mark_object (XSESSION_HANDLE (obj)->transport);
+  mark_object (XSESSION_HANDLE (obj)->coding_system);
+  mark_object (XSESSION_HANDLE (obj)->last_response_status);
+  mark_object (XSESSION_HANDLE (obj)->last_response_headers);
+  mark_object (XSESSION_HANDLE (obj)->property_list);
+  mark_object (XSESSION_HANDLE (obj)->state);
+  return XSESSION_HANDLE (obj)->stuff;
+}
+
+static void
+print_session_handle (Lisp_Object obj,
+		  Lisp_Object printcharfun,
+		  int UNUSED (escapeflag))
+{
+  Lisp_Session_Handle *session_handle = XSESSION_HANDLE (obj);
+
+  /* #### we should be able to do better */
+  if (print_readably)
+    printing_unreadable_object ("#<session_handle>");
+
+  write_c_string (printcharfun, "#<session_handle ");
+  if (NILP(session_handle->transport))
+    write_c_string (printcharfun, "(dead) ");
+  else
+    write_fmt_string_lisp (printcharfun, "%S ", 1, session_handle->transport);
+  if (session_handle->url)
+    write_fmt_string_lisp (printcharfun, "%S", 1, session_handle->url);
+  write_fmt_string (printcharfun, " 0x%lx>", (unsigned long) session_handle);
+}
+
 #ifdef PROPERTIES_ARE_IMPLEMENTED
 static Lisp_Object
 session_handle_get (Lisp_Object session, Lisp_Object prop, Lisp_Object defalt)
@@ -322,7 +357,15 @@ DEFINE_LRECORD_IMPLEMENTATION ("session_handle",	    /* name */
 
 
 /************************************************************************/
+/*			   LISP object handling 			*/
+/************************************************************************/
 /*                   Basic session_handle functions                     */
+/* Contents:								*/
+/*   make-session-handle						*/
+/*   session-handle-transport						*/
+/*   session-handle-p							*/
+/*   session-handle-live-p						*/
+/*   session-handle-plist						*/
 /************************************************************************/
 
 #ifdef EXPOSE_RAW_SESSION_HANDLE
@@ -451,11 +494,9 @@ Return the property list of SESSION-HANDLE.
 
 /************************************************************************/
 /*			    Lisp API functions				*/
+/* Contents:								*/
+/*   neon-make-session-handle						*/
 /************************************************************************/
-
-/* error macros */
-
-#define UNIMPLEMENTED(reason) signal_error (Qunimplemented, reason, Qunbound)
 
 DEFUN ("neon-make-session-handle", Fneon_make_session_handle, 1, 4, 0, /*
 Return a neon session for URL, wrapped in a session handle.
@@ -535,6 +576,137 @@ from a function `make-session-handle'.
   return wrap_session_handle (session_handle);
 }
 
+/************************************************************************/
+/*			   Session authentication			*/
+/* Contents:								*/
+/*   neon-session-set-auth						*/
+/*   neon-session-forget-auth						*/
+/************************************************************************/
+
+/* Authentication
+ *
+ * libneon comment:
+ *
+ * The callback used to request the username and password in the given
+ * realm. The username and password must be copied into the buffers
+ * which are both of size NE_ABUFSIZ.  The 'attempt' parameter is zero
+ * on the first call to the callback, and increases by one each time
+ * an attempt to authenticate fails.
+ *
+ * The callback must return zero to indicate that authentication
+ * should be attempted with the username/password, or non-zero to
+ * cancel the request. (if non-zero, username and password are
+ * ignored.)
+ *
+ * XEmacs API:
+ *
+ * CALLBACK is a funcallable which must take exactly two arguments, a string
+ * REALM and an integer ATTEMPT, and return a cons of two strings.  The car
+ * will be interpreted as the username and the cdr as the password.  REALM
+ * is the HTTP authentication realm, and ATTEMPT counts the tries for
+ * authentication made.  All strings are in the `binary' coding (ie, the
+ * callback must translate in both directions).
+ *
+ * As of neon 0.24.7, these methods are *not* idempotent.  libneon
+ * registers an internal hook which frees the credential storage which
+ * has a single ID per request, but the hook can be registered
+ * multiple times ... and will try to free the storage multiple times.
+ * Ba-a-ad libeon, bad, bad libneon!
+ *
+ * Also, we can't simply always ne_forget_auth before adding; that method
+ * always clears both.  So we combine these two functions into a single
+ * function and require that both callbacks be specified (of course
+ * specifying nil is OK).  Then we can always explicitly clear the existing
+ * authentication information in preparation.
+ */
+
+DEFUN ("neon-session-set-auth", Fneon_session_set_auth, 3, 3, 0, /*
+Set the authentication methods for SESSION to SERVER-CB and PROXY-CB.
+If non-nil, SERVER_CB and PROXY_CB must be funcallables which take exactly
+two arguments, a string REALM and an integer ATTEMPT, and return a cons of
+two strings.  REALM is the HTTP authentication realm, and ATTEMPT counts
+the tries for authentication made.  The car of the return value is
+interpreted as the username and the cdr as the password.
+
+WARNING: This function clears any previous authentication methods, so if
+you need both server authentication and proxy authentication, you must set
+both in a single call.  (This is not a bug, it is a limitation of libneon.)
+
+This function is a no-op if both callbacks are nil.  Use `neon-forget-auth'
+to clear all credentials without resetting them.
+
+Returns no useful value (currently, nil).
+*/
+       (session, server_cb, proxy_cb))
+{
+  Lisp_Session_Handle *s;
+
+  /* sanity check the session */
+  CHECK_SESSION_HANDLE (session);
+  s = XSESSION_HANDLE (session);
+  if (!EQ (s->transport, Qneon))
+    wtaerror ("URL handle is not a neon handle", session);
+  if (!s->neon || !s->neon->session)
+    invalid_state ("session not open", session);
+
+  /* sanity check the callbacks */
+  if (!NILP (server_cb))
+    if (NILP (Ffunctionp (server_cb))
+	|| XINT (Ffunction_max_args (server_cb)) != 2
+	|| XINT (Ffunction_min_args (server_cb)) != 2)
+      signal_error (Qwrong_type_argument,
+		    "server credential is not a function of two arguments",
+		    server_cb);
+  if (!NILP (proxy_cb))
+    if (NILP (Ffunctionp (proxy_cb))
+	|| XINT (Ffunction_max_args (proxy_cb)) != 2
+	|| XINT (Ffunction_min_args (proxy_cb)) != 2)
+      signal_error (Qwrong_type_argument,
+		    "proxy credential is not a function of two arguments",
+		    proxy_cb);
+
+  /* clear previous credentials to avoid registering cleanup callback
+     multiple times */
+  if (!NILP (server_cb) || !NILP (proxy_cb))
+    ne_forget_auth (s->neon->session);
+
+  /* set the callbacks */
+  if (!NILP (server_cb))
+    {
+      ne_set_server_auth (s->neon->session,
+			  &neon_credentials_cb,
+			  (void *) server_cb);
+      Faset (s->state, make_int (SERVER_CB), server_cb);
+    }
+  if (!NILP (proxy_cb))
+    {
+      ne_set_proxy_auth (s->neon->session,
+			 &neon_credentials_cb,
+			 (void *) proxy_cb);
+      Faset (s->state, make_int (PROXY_CB), proxy_cb);
+    }
+
+  return Qnil;
+}
+
+DEFUN ("neon-session-forget-auth", Fneon_session_forget_auth, 1, 1, 0, /*
+Clear authentication information for SESSION.
+Returns nil.
+*/
+       (session))
+{
+  Lisp_Session_Handle *s;
+
+  CHECK_SESSION_HANDLE (session);
+  s = XSESSION_HANDLE (session);
+  if (!EQ (s->transport, Qneon))
+    wtaerror ("not a neon session", session);
+  if (!s->neon || !s->neon->session)
+    invalid_state ("session not open", session);
+  ne_forget_auth (s->neon->session);
+  return Qnil;
+}
+
 /* WebDAV functionality
  *
  * As mentioned, libneon does very little.  Ga-a-ack! that's not true.
@@ -606,48 +778,17 @@ from a function `make-session-handle'.
  *                  return a meaningful error string
  */
 
-static Lisp_Object
-neon_status (int status)
-{
-  switch (status)
-    {
-    case NE_OK:
-      return Qnil;		/* #### maybe should be Qt? */
-    case NE_AUTH:
-      return Qauthorization_failure;
-    case NE_PROXYAUTH:
-      return Qproxy_authorization_failure;
-    case NE_CONNECT:
-      return Qconnection_failure;
-    case NE_TIMEOUT:
-      return Qtimeout;
-    case NE_ERROR:
-      /* #### should we get the neon error string here, or provide an API? */
-      return Qgeneric_error;
-    default:
-      signal_error (Qio_error, "ne_get returned unexpected status",
-		    make_int (status));
-    }
-}
-
-static Extbyte *
-neon_prepare_path (Lisp_Object path, Lisp_Object codesys)
-{
-  Extbyte *p = 0;
-
-  if (!STRINGP (path))
-    wtaerror ("path argument must be stringp", path);
-  else
-    {
-      codesys = Fget_coding_system (NILP (codesys) ? Qutf_8 : codesys);
-      p = NEW_LISP_STRING_TO_EXTERNAL (path, codesys);
-      p = ne_path_escape (p);
-    }
-  /* I don't trust libneon?  Whatever gives you _that_ impression? */
-  if (!p)
-    invalid_state ("wtf! couldn't convert Lisp string? to external?!", path);
-  return p;
-}
+/************************************************************************/
+/*			   neon convenience APIs			*/
+/* Contents:								*/
+/*   neon-get-file							*/
+/*   neon-put-file							*/
+/*   neon-post-get-file							*/
+/*   neon-delete							*/
+/*   neon-mkcol								*/
+/*   neon-copy								*/
+/*   neon-move								*/
+/************************************************************************/
 
 /* It's not worth providing an API for ne_options, since it will only tell
    you about Classes 1 and 2 of WebDAV compliance and the mod_dav executable
@@ -773,21 +914,6 @@ internally.  CODESYS defaults to `utf-8'.
   return neon_status (status);
 }
 
-static int
-neon_prepare_depth (Lisp_Object depth, int kidz_ok)
-{
-  int d;
-  if (EQ (depth, make_int (0)))
-    d = NE_DEPTH_ZERO;
-  else if (EQ (depth, Qinfinite))
-    d = NE_DEPTH_INFINITE;
-  else if (kidz_ok && EQ (depth, make_int (1)))
-    d = NE_DEPTH_ONE;		/* not used by WebDAV COPY */
-  else
-    signal_error (intern ("args-out-of-range"), "invalid WebDAV depth", depth);
-  return d;
-}
-
 DEFUN ("neon-copy", Fneon_copy, 3, 6, 0, /*
 Copy the URL described by SESSION and path SOURCE to path TARGET.
 Optional DEPTH may be 0 or `infinity', which adds an appropriate depth
@@ -824,6 +950,10 @@ then URL-encoded internally.  CODESYS defaults to `utf-8'.
 
   return neon_status (status);
 }
+
+/************************************************************************/
+/*			   neon request handling			*/
+/************************************************************************/
 
 /* Property handling
  *
@@ -950,116 +1080,7 @@ then URL-encoded internally.  CODESYS defaults to `utf-8'.
      (setq state (make-vector 2 header)))
 */
 
-/* ;; element start callback
-   (defun start-cb (state ns nm ap) */
-static int
-neon_start_cb (void *userdata, int UNUSED(parent),
-	       const char *nspace, const char *name,
-	       const char **atts)
-{
-  Lisp_Object neon_state = (Lisp_Object) userdata;
-  Lisp_Object cs = Fget_coding_system (Faref (neon_state,
-					      make_int (CODING_SYSTEM)));
-  Lisp_Object ns = build_ext_string (nspace, cs);
-  Lisp_Object nm = build_ext_string (name, cs);
-  Lisp_Object ap = Qnil;
-  /* (let ((current (aref state 1))) */
-  Lisp_Object current = Faref (neon_state, make_int (CURRENT));
-  /* Lisp_Object tmp; */
-  const char **a;
-  int i;
-
-  /* generate ap (the attribute plist) */
-  for (a = atts, i = 0; *a != NULL; a++, i++)
-    ap = Fcons (build_ext_string (*a, cs), ap);
-  if (i % 2)
-    invalid_state ("attribute array length was odd", ap);
-  ap = Fnreverse (ap);
-
-  /* (setcdr current (cons (list nm ns ap) (cdr current))) */
-  Fsetcdr (current, Fcons (list3 (nm, ns, ap), XCDR (current)));
-  /* (setq current (cdr current)) */
-  current = XCDR (current);
-  {
-    /* (let ((tail (cdr (cdr (car current))))) */
-    Lisp_Object tail = XCDR (XCDR (XCAR (current)));
-    /* (setcdr tail current) */
-    Fsetcdr (tail, current);
-    /* (aset state 1 tail))) */
-    Faset (neon_state, make_int (CURRENT), tail);
-  }
-  /* 1) */
-  return NEON_XML_ACCEPT;
-}
-
-/* ;; cdata callback
-   (defun cdata-cb (state cdata)
-
-   libneon doesn't coalesce adjacent cdata into a single cdata (in fact it
-   seems to always return vertical whitespace as a separate component) from
-   other whitespace or text.  It also doesn't bother to coalesce across
-   internal buffer boundaries, so a word may be split in the middle:
-   "[...1018 characters]<el>word</el>"
-   can result in "word" being split into "wo" and "rd"." */
-static int
-neon_cdata_cb (void *userdata, int UNUSED(state),
-	       const char *cdata, size_t len)
-{
-  Lisp_Object neon_state = (Lisp_Object) userdata;
-  Lisp_Object cs = Fget_coding_system (Faref (neon_state,
-					      make_int (CODING_SYSTEM)));
-  /* (let ((current (aref state 1))) */
-  Lisp_Object current = Faref (neon_state, make_int (CURRENT));
-
-  /* (setcdr current (cons cdata (cdr current))) */
-  Fsetcdr (current, Fcons (make_ext_string (cdata, len, cs), XCDR (current)));
-  /* (aset state 1 (cdr current))) */
-  Faset (neon_state, make_int (CURRENT), XCDR (current));
-  /* 1) */
-  return NEON_XML_CONTINUE;
-}
-
-/* ;; element end callback
-   (defun end-cb (state) */
-static int
-neon_end_cb (void *userdata, int UNUSED(state),
-	     const char * UNUSED(nspace), const char * UNUSED(name))
-{
-  Lisp_Object neon_state = (Lisp_Object) userdata;
-  /* (let ((current (aref state 1))) */
-  Lisp_Object current = Faref (neon_state, make_int (CURRENT));
-
-  /* #### abort if EQ (current, header) here?
-     #### abort if NILP (Fcdr (current)) here? */
-  /* (aset state 1 (cdr current)) */
-  Faset (neon_state, make_int (CURRENT), XCDR (current));
-  /* (setcdr current nil)) */
-  Fsetcdr (current, Qnil);
-  /* 1) */
-  return NEON_XML_CONTINUE;
-}
-
 /* low-level request handling */
-
-#define HAVE_NEON_0_25_4
-
-#ifdef HAVE_NEON_0_24_7
-/* ... and maybe other older neons;
-   this interface is gone in neon 0.25.4. */
-/* Header catchers receive the whole header.
-   userdata will be a pointer to a Lisp object containing a list of strings. */
-static void
-neon_header_catcher (void *userdata, const char *value)
-{
-  Lisp_Object *lp = (Lisp_Object *) userdata;
-  Lisp_Object v = build_ext_string (value, Qbinary);
-  struct gcpro gcpro1;
-
-  GCPRO1 (v);
-  *lp = Fcons (v, *lp);
-  UNGCPRO;
-}
-#endif
 
 DEFUN ("neon-request-create", Fneon_request_create, 3, 4, 0, /*
 Add a request to session handle SESSION using METHOD on PATH.
@@ -1103,206 +1124,6 @@ response status and headers are cleared.  Returns SESSION.
   }
 
   return session;
-}
-
-/* write out the data received from the request to an Lstream */
-static int
-neon_write_lstream (void *stream, const char *data, size_t count)
-{
-  Lstream *s = XLSTREAM ((Lisp_Object) stream);
-  if (count > 0)
-    {
-      /* #### the return code should be checked here, perhaps? */
-      Lstream_write (s, data, count);
-    }
-#if 0
-  /* probably this is responsible for the "lstream not open errors"? */
-  else
-    {
-      Lstream_close (s);
-      /* Lstream_delete (s); */
-    }
-#endif
-  /* #### can we fail in a detectable way? */
-  return 0;
-}
-
-/* Authentication
- *
- * libneon comment:
- *
- * The callback used to request the username and password in the given
- * realm. The username and password must be copied into the buffers
- * which are both of size NE_ABUFSIZ.  The 'attempt' parameter is zero
- * on the first call to the callback, and increases by one each time
- * an attempt to authenticate fails.
- *
- * The callback must return zero to indicate that authentication
- * should be attempted with the username/password, or non-zero to
- * cancel the request. (if non-zero, username and password are
- * ignored.)
- *
- * XEmacs API:
- *
- * CALLBACK is a funcallable which must take exactly two arguments, a string
- * REALM and an integer ATTEMPT, and return a cons of two strings.  The car
- * will be interpreted as the username and the cdr as the password.  REALM
- * is the HTTP authentication realm, and ATTEMPT counts the tries for
- * authentication made.  All strings are in the `binary' coding (ie, the
- * callback must translate in both directions).
- *
- * As of neon 0.24.7, these methods are *not* idempotent.  libneon
- * registers an internal hook which frees the credential storage which
- * has a single ID per request, but the hook can be registered
- * multiple times ... and will try to free the storage multiple times.
- * Ba-a-ad libeon, bad, bad libneon!
- *
- * Also, we can't simply always ne_forget_auth before adding; that method
- * always clears both.  So we combine these two functions into a single
- * function and require that both callbacks be specified (of course
- * specifying nil is OK).  Then we can always explicitly clear the existing
- * authentication information in preparation.
- */
-
-static int 
-neon_credentials_callback (void *userdata, const char *rlm,
-			   int at, char *username, char *password)
-{
-  Lisp_Object callback = (Lisp_Object) userdata;
-  Lisp_Object credentials;
-  struct gcpro gcpro1;
-
-  {
-    struct gcpro ngcpro1;
-    Lisp_Object args[3];
-    args[0] = callback;
-    args[1] = build_ext_string (rlm, Qbinary);
-    args[2] = make_int (at);
-    NGCPRO1 (args[0]);
-    ngcpro1.nvars = 3;
-    credentials = Ffuncall (3, args);
-    UNGCPRO;
-  }
-
-  GCPRO1 (credentials);
-  /* #### ugly hack */
-  if (INTP (credentials))
-    return 1;
-  /* more sanity checking on the callback */
-  CHECK_CONS (credentials);
-
-  {
-    Lisp_Object args_out_of_range = intern ("args-out-of-range");
-    /* credentials is GCPRO'd, user and pass are OK */
-    Lisp_Object user = XCAR (credentials);
-    Lisp_Object pass = XCDR (credentials);
-    Extbyte *utmp, *ptmp;
-
-    /* yet more sanity checking on the callback */
-    CHECK_STRING (user);
-    CHECK_STRING (pass);
-
-    /* #### these are user errors, maybe should return non-zero to libneon? */
-    if (XINT (Flength (user)) >= NE_ABUFSIZ)
-      signal_error (args_out_of_range, "username overflows buffer", user);
-    if (XINT (Flength (pass)) >= NE_ABUFSIZ)
-      signal_error (args_out_of_range, "password overflows buffer", pass);
-    
-    LISP_STRING_TO_EXTERNAL (user, utmp, Qbinary);
-    strncpy (username, utmp, NE_ABUFSIZ);
-    LISP_STRING_TO_EXTERNAL (pass, ptmp, Qbinary);
-    strncpy (password, ptmp, NE_ABUFSIZ);
-  }
-  UNGCPRO;
-
-  return 0;
-}
-
-DEFUN ("neon-session-set-auth", Fneon_session_set_auth, 3, 3, 0, /*
-Set the authentication methods for SESSION to SERVER-CB and PROXY-CB.
-If non-nil, SERVER_CB and PROXY_CB must be funcallables which take exactly
-two arguments, a string REALM and an integer ATTEMPT, and return a cons of
-two strings.  REALM is the HTTP authentication realm, and ATTEMPT counts
-the tries for authentication made.  The car of the return value is
-interpreted as the username and the cdr as the password.
-
-WARNING: This function clears any previous authentication methods, so if
-you need both server authentication and proxy authentication, you must set
-both in a single call.  (This is not a bug, it is a limitation of libneon.)
-
-This function is a no-op if both callbacks are nil.  Use `neon-forget-auth'
-to clear all credentials without resetting them.
-
-Returns no useful value (currently, nil).
-*/
-       (session, server_cb, proxy_cb))
-{
-  Lisp_Session_Handle *s;
-
-  /* sanity check the session */
-  CHECK_SESSION_HANDLE (session);
-  s = XSESSION_HANDLE (session);
-  if (!EQ (s->transport, Qneon))
-    wtaerror ("URL handle is not a neon handle", session);
-  if (!s->neon || !s->neon->session)
-    invalid_state ("session not open", session);
-
-  /* sanity check the callbacks */
-  if (!NILP (server_cb))
-    if (NILP (Ffunctionp (server_cb))
-	|| XINT (Ffunction_max_args (server_cb)) != 2
-	|| XINT (Ffunction_min_args (server_cb)) != 2)
-      signal_error (Qwrong_type_argument,
-		    "server credential is not a function of two arguments",
-		    server_cb);
-  if (!NILP (proxy_cb))
-    if (NILP (Ffunctionp (proxy_cb))
-	|| XINT (Ffunction_max_args (proxy_cb)) != 2
-	|| XINT (Ffunction_min_args (proxy_cb)) != 2)
-      signal_error (Qwrong_type_argument,
-		    "proxy credential is not a function of two arguments",
-		    proxy_cb);
-
-  /* clear previous credentials to avoid registering cleanup callback
-     multiple times */
-  if (!NILP (server_cb) || !NILP (proxy_cb))
-    ne_forget_auth (s->neon->session);
-
-  /* set the callbacks */
-  if (!NILP (server_cb))
-    {
-      ne_set_server_auth (s->neon->session,
-			  &neon_credentials_callback,
-			  (void *) server_cb);
-      Faset (s->state, make_int (SERVER_CB), server_cb);
-    }
-  if (!NILP (proxy_cb))
-    {
-      ne_set_proxy_auth (s->neon->session,
-			 &neon_credentials_callback,
-			 (void *) proxy_cb);
-      Faset (s->state, make_int (PROXY_CB), proxy_cb);
-    }
-
-  return Qnil;
-}
-
-DEFUN ("neon-forget-auth", Fneon_forget_auth, 1, 1, 0, /*
-Clear authentication information for SESSION.
-Returns nil.
-*/
-       (session))
-{
-  Lisp_Session_Handle *s;
-
-  CHECK_SESSION_HANDLE (session);
-  s = XSESSION_HANDLE (session);
-  if (!EQ (s->transport, Qneon))
-    wtaerror ("not a neon session", session);
-  if (!s->neon || !s->neon->session)
-    invalid_state ("session not open", session);
-  ne_forget_auth (s->neon->session);
-  return Qnil;
 }
 
 /* We break out various low-level APIs such as ne_add_response_body_reader()
@@ -1481,30 +1302,6 @@ Returns nil.
   return Qnil;
 }
 
-#if 0
-/* Storing an HTTP status result */
-typedef struct {
-    int major_version;
-    int minor_version;
-    int code; /* Status-Code value */
-    int klass; /* Class of Status-Code (1-5) */
-    char *reason_phrase;
-} ne_status;
-#endif
-
-static Lisp_Object
-neon_prepare_status (ne_request *neon)
-{
-  const ne_status *s = ne_get_status (neon);
-  Lisp_Object args[5];
-  args[0] = make_int (s->major_version);
-  args[1] = make_int (s->minor_version);
-  args[2] = make_int (s->code);
-  args[3] = make_int (s->klass);
-  args[4] = build_ext_string (s->reason_phrase, Qbinary);
-  return Fvector (5, args);
-}
-
 DEFUN ("neon-request-dispatch", Fneon_request_dispatch, 1, 1, 0, /*
 Dispatch REQUEST.
 Before dispatch, set response handler with `neon-add-response-body-reader'.
@@ -1539,7 +1336,7 @@ phrase \(five elements) in that order.
     int code;
 
     code = ne_request_dispatch (neon);
-    r->last_response_status = neon_prepare_status (neon);
+    r->last_response_status = neon_prepare_http_status (neon);
 #ifdef HAVE_NEON_0_25_4
     /* #### this may not be the right place for this */
     {
@@ -1555,23 +1352,18 @@ phrase \(five elements) in that order.
     /* #### I think we can destroy the request right here and right now. */
     if (r->neon->request)
       {
-	ne_xml_destroy (r->neon->request);
+	ne_request_destroy (r->neon->request);
 	r->neon->request = NULL;
       }
     else
-      invalid_state ("WTF? No neon request!", r);
-    /* #### the errors in the following switch will leak an ne_xml_parser
-       if it exists; we should unwind-protect it */
+      invalid_state ("WTF? No neon request!", request);
+
     if (BUFFERP (Faref (r->state, make_int (READER))))
       {
-	/* the reader uses an lstream, flush, close, and destroy it
-	   #### is it premature to close and destroy it? */
+	/* the reader uses an lstream, (flush and) close it
+	   #### we don't have access to the other_end, can't delete it. */
 	Lstream *s = XLSTREAM (Faref (r->state, make_int (READER_LSTREAM)));
 	Lstream_close (s); 	/* flushes */
-	/* Lstream_close (CODING_STREAM_DATA (s)->other_end); */
-	Lstream_delete (CODING_STREAM_DATA (s)->other_end);
-	CODING_STREAM_DATA (s)->other_end = NULL;
-	Lstream_delete (s);
 	Faset (r->state, make_int (READER_LSTREAM), Qnil);
       }
     else if (EQ (Faref (r->state, make_int (READER)), Qwebdav_xml))
@@ -1583,7 +1375,7 @@ phrase \(five elements) in that order.
 	    r->neon->parser = NULL;
 	  }
 	else
-	  invalid_state ("WTF? No neon parser!", r);
+	  invalid_state ("WTF? No neon parser!", request);
       }
       
     switch (code)
@@ -1613,6 +1405,299 @@ phrase \(five elements) in that order.
   /* not reached */
   return Qnil;
 }
+
+/************************************************************************/
+/*		       callbacks, helpers, wrappers			*/
+/* Contents:								*/
+/*   neon_status							*/
+/*   neon_prepare_path							*/
+/*   neon_prepare_depth							*/
+/*   neon_prepare_http_status						*/
+/*   neon_write_lstream							*/
+/*   neon_header_catcher						*/
+/*   neon_start_cb							*/
+/*   neon_cdata_cb							*/
+/*   neon_end_cb							*/
+/*   neon_credentials_cb						*/
+/************************************************************************/
+
+/* utilities used by convenience APIs */
+
+static Lisp_Object
+neon_status (int status)
+{
+  switch (status)
+    {
+    case NE_OK:
+      return Qnil;		/* #### maybe should be Qt? */
+    case NE_AUTH:
+      return Qauthorization_failure;
+    case NE_PROXYAUTH:
+      return Qproxy_authorization_failure;
+    case NE_CONNECT:
+      return Qconnection_failure;
+    case NE_TIMEOUT:
+      return Qtimeout;
+    case NE_ERROR:
+      /* #### should we get the neon error string here, or provide an API? */
+      return Qgeneric_error;
+    default:
+      signal_error (Qio_error, "ne_get returned unexpected status",
+		    make_int (status));
+    }
+}
+
+static Extbyte *
+neon_prepare_path (Lisp_Object path, Lisp_Object codesys)
+{
+  Extbyte *p = 0;
+
+  if (!STRINGP (path))
+    wtaerror ("path argument must be stringp", path);
+  else
+    {
+      /* #### I don't thing we need to GCPRO here */
+      codesys = Fget_coding_system (NILP (codesys) ? Qutf_8 : codesys);
+      p = NEW_LISP_STRING_TO_EXTERNAL (path, codesys);
+    }
+  /* I don't trust libneon?  Whatever gives you _that_ impression? */
+  if (p)
+    p = ne_path_escape (p);
+  if (!p)
+    invalid_state ("wtf! couldn't convert Lisp string to external?!", path);
+  return p;
+}
+
+static int
+neon_prepare_depth (Lisp_Object depth, int kidz_ok)
+{
+  int d;
+  if (EQ (depth, make_int (0)))
+    d = NE_DEPTH_ZERO;
+  else if (EQ (depth, Qinfinite))
+    d = NE_DEPTH_INFINITE;
+  else if (kidz_ok && EQ (depth, make_int (1)))
+    d = NE_DEPTH_ONE;		/* not used by WebDAV COPY */
+  else
+    signal_error (intern ("args-out-of-range"), "invalid WebDAV depth", depth);
+  return d;
+}
+
+#if 0
+/* Storing an HTTP status result */
+typedef struct {
+    int major_version;
+    int minor_version;
+    int code; /* Status-Code value */
+    int klass; /* Class of Status-Code (1-5) */
+    char *reason_phrase;
+} ne_status;
+#endif
+
+static Lisp_Object
+neon_prepare_http_status (ne_request *neon)
+{
+  const ne_status *s = ne_get_status (neon);
+  Lisp_Object args[5];
+  args[0] = make_int (s->major_version);
+  args[1] = make_int (s->minor_version);
+  args[2] = make_int (s->code);
+  args[3] = make_int (s->klass);
+  args[4] = build_ext_string (s->reason_phrase, Qbinary);
+  return Fvector (5, args);
+}
+
+/* write out the data received from the request to an Lstream */
+static int
+neon_write_lstream (void *stream, const char *data, size_t count)
+{
+  Lstream *s = XLSTREAM ((Lisp_Object) stream);
+  if (count > 0)
+    {
+      /* #### the return code should be checked here, perhaps? */
+      Lstream_write (s, data, count);
+    }
+#if 0
+  /* probably this is responsible for the "lstream not open errors"? */
+  else
+    {
+      Lstream_close (s);
+      /* Lstream_delete (s); */
+    }
+#endif
+  /* #### can we fail in a detectable way? */
+  return 0;
+}
+
+#ifdef HAVE_NEON_0_24_7
+/* ... and maybe other older neons;
+   this interface is gone in neon 0.25.4. */
+/* Header catchers receive the whole header.
+   userdata will be a pointer to a Lisp object containing a list of strings. */
+static void
+neon_header_catcher (void *userdata, const char *value)
+{
+  Lisp_Object *lp = (Lisp_Object *) userdata;
+  Lisp_Object v = build_ext_string (value, Qbinary);
+  struct gcpro gcpro1;
+
+  GCPRO1 (v);
+  *lp = Fcons (v, *lp);
+  UNGCPRO;
+}
+#endif
+
+/* ;; element start callback
+   (defun start-cb (state ns nm ap) */
+static int
+neon_start_cb (void *userdata, int UNUSED(parent),
+	       const char *nspace, const char *name,
+	       const char **atts)
+{
+  Lisp_Object neon_state = (Lisp_Object) userdata;
+  Lisp_Object cs = Fget_coding_system (Faref (neon_state,
+					      make_int (CODING_SYSTEM)));
+  Lisp_Object ns = build_ext_string (nspace, cs);
+  Lisp_Object nm = build_ext_string (name, cs);
+  Lisp_Object ap = Qnil;
+  /* (let ((current (aref state 1))) */
+  Lisp_Object current = Faref (neon_state, make_int (CURRENT));
+  /* Lisp_Object tmp; */
+  const char **a;
+  int i;
+
+  /* generate ap (the attribute plist) */
+  for (a = atts, i = 0; *a != NULL; a++, i++)
+    ap = Fcons (build_ext_string (*a, cs), ap);
+  if (i % 2)
+    invalid_state ("attribute array length was odd", ap);
+  ap = Fnreverse (ap);
+
+  /* (setcdr current (cons (list nm ns ap) (cdr current))) */
+  Fsetcdr (current, Fcons (list3 (nm, ns, ap), XCDR (current)));
+  /* (setq current (cdr current)) */
+  current = XCDR (current);
+  {
+    /* (let ((tail (cdr (cdr (car current))))) */
+    Lisp_Object tail = XCDR (XCDR (XCAR (current)));
+    /* (setcdr tail current) */
+    Fsetcdr (tail, current);
+    /* (aset state 1 tail))) */
+    Faset (neon_state, make_int (CURRENT), tail);
+  }
+  /* 1) */
+  return NEON_XML_ACCEPT;
+}
+
+/* ;; cdata callback
+   (defun cdata-cb (state cdata)
+
+   libneon doesn't coalesce adjacent cdata into a single cdata (in fact it
+   seems to always return vertical whitespace as a separate component) from
+   other whitespace or text.  It also doesn't bother to coalesce across
+   internal buffer boundaries, so a word may be split in the middle:
+   "[...1018 characters]<el>word</el>"
+   can result in "word" being split into "wo" and "rd"." */
+static int
+neon_cdata_cb (void *userdata, int UNUSED(state),
+	       const char *cdata, size_t len)
+{
+  Lisp_Object neon_state = (Lisp_Object) userdata;
+  Lisp_Object cs = Fget_coding_system (Faref (neon_state,
+					      make_int (CODING_SYSTEM)));
+  /* (let ((current (aref state 1))) */
+  Lisp_Object current = Faref (neon_state, make_int (CURRENT));
+
+  /* (setcdr current (cons cdata (cdr current))) */
+  Fsetcdr (current, Fcons (make_ext_string (cdata, len, cs), XCDR (current)));
+  /* (aset state 1 (cdr current))) */
+  Faset (neon_state, make_int (CURRENT), XCDR (current));
+  /* 1) */
+  return NEON_XML_CONTINUE;
+}
+
+/* ;; element end callback
+   (defun end-cb (state) */
+static int
+neon_end_cb (void *userdata, int UNUSED(state),
+	     const char * UNUSED(nspace), const char * UNUSED(name))
+{
+  Lisp_Object neon_state = (Lisp_Object) userdata;
+  /* (let ((current (aref state 1))) */
+  Lisp_Object current = Faref (neon_state, make_int (CURRENT));
+
+  /* #### abort if EQ (current, header) here?
+     #### abort if NILP (Fcdr (current)) here? */
+  /* (aset state 1 (cdr current)) */
+  Faset (neon_state, make_int (CURRENT), XCDR (current));
+  /* (setcdr current nil)) */
+  Fsetcdr (current, Qnil);
+  /* 1) */
+  return NEON_XML_CONTINUE;
+}
+
+static int 
+neon_credentials_cb (void *userdata, const char *rlm,
+			   int at, char *username, char *password)
+{
+  Lisp_Object callback = (Lisp_Object) userdata;
+  Lisp_Object credentials;
+  struct gcpro gcpro1;
+
+  {
+    struct gcpro ngcpro1;
+    Lisp_Object args[3];
+    args[0] = callback;
+    args[1] = build_ext_string (rlm, Qbinary);
+    args[2] = make_int (at);
+    NGCPRO1 (args[0]);
+    ngcpro1.nvars = 3;
+    credentials = Ffuncall (3, args);
+    UNGCPRO;
+  }
+
+  GCPRO1 (credentials);
+  /* #### ugly hack */
+  if (INTP (credentials))
+    return 1;
+  /* more sanity checking on the callback */
+  CHECK_CONS (credentials);
+
+  {
+    Lisp_Object args_out_of_range = intern ("args-out-of-range");
+    /* credentials is GCPRO'd, user and pass are OK */
+    Lisp_Object user = XCAR (credentials);
+    Lisp_Object pass = XCDR (credentials);
+    Extbyte *utmp, *ptmp;
+
+    /* yet more sanity checking on the callback */
+    CHECK_STRING (user);
+    CHECK_STRING (pass);
+
+    /* #### these are user errors, maybe should return non-zero to libneon? */
+    if (XINT (Flength (user)) >= NE_ABUFSIZ)
+      signal_error (args_out_of_range, "username overflows buffer", user);
+    if (XINT (Flength (pass)) >= NE_ABUFSIZ)
+      signal_error (args_out_of_range, "password overflows buffer", pass);
+    
+    LISP_STRING_TO_EXTERNAL (user, utmp, Qbinary);
+    strncpy (username, utmp, NE_ABUFSIZ);
+    LISP_STRING_TO_EXTERNAL (pass, ptmp, Qbinary);
+    strncpy (password, ptmp, NE_ABUFSIZ);
+  }
+  UNGCPRO;
+
+  return 0;
+}
+
+/************************************************************************/
+/*				Module API				*/
+/* Contents:								*/
+/*   modules_of_neon_api						*/
+/*   syms_of_neon_api							*/
+/*   vars_of_neon_api							*/
+/*   unload_neon_api							*/
+/************************************************************************/
 
 /*
  * Each dynamically loaded Emacs module is given a name at compile
@@ -1667,6 +1752,8 @@ syms_of_neon_api ()
 
   /* neon-specific functions. */
   DEFSUBR (Fneon_make_session_handle);
+  DEFSUBR (Fneon_session_set_auth);
+  DEFSUBR (Fneon_session_forget_auth);
   DEFSUBR (Fneon_get_file);
   DEFSUBR (Fneon_put_file);
   DEFSUBR (Fneon_post_get_file);
@@ -1675,8 +1762,6 @@ syms_of_neon_api ()
   DEFSUBR (Fneon_copy);
   DEFSUBR (Fneon_move);
   DEFSUBR (Fneon_request_create);
-  DEFSUBR (Fneon_session_set_auth);
-  DEFSUBR (Fneon_forget_auth);
   DEFSUBR (Fneon_add_response_body_reader);
   DEFSUBR (Fneon_add_request_header);
   DEFSUBR (Fneon_set_request_body_buffer);

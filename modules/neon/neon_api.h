@@ -145,3 +145,9 @@ DECLARE_LRECORD (session_handle, Lisp_Session_Handle);
 #define CHECK_SESSION_HANDLE(x) CHECK_RECORD (x, session_handle)
 #define CONCHECK_SESSION_HANDLE(x) CONCHECK_RECORD (x, session_handle)
 
+/* utilities */
+
+/* error macros */
+
+#define UNIMPLEMENTED(reason) signal_error (Qunimplemented, reason, Qunbound)
+
