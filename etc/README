@@ -1,0 +1,58 @@
+
+This directory contains some text files of documentation for XEmacs or
+of interest to XEmacs users, some programs used by or with XEmacs, and
+the file of on-line documentation for XEmacs.
+
+COPYING			GNU Public License
+ChangeLog		ChangeLog for etc/
+ETAGS.EBNF              Description of TAGS file format
+Emacs.ad		Sample Resource file
+HELLO			Hello in many languages (Mule test file)
+InstallGuide		Fast track to installation
+NEWS			XEmacs 21.5 release information
+ONEWS			Older release information
+OONEWS			Even older release information
+README			This file
+TUTORIAL		Tutorial for first time users (English version)
+TUTORIAL.*		Tutorials in non-English languages
+VEGETABLES		XEmacs 21.5 code names
+XKeysymDB		X Keysym Database with Motif bindings
+cbx.png			"Created by XEmacs" logo
+ctags.1			Ctags man page
+custom/			Images used in Custom mode
+editclient.sh		Either start up XEmacs or connect to a running one
+emacskeys.sco		
+emacsstrs.sco		Special files for running on an SCO console
+eos/			Images for EOS support (GUD)
+etags.1			Etags man page
+gnuattach.1		Gnuattach man page
+gnuclient.1		Gnuclient man page
+gnudoit.1		Gnudoit man page
+gnuserv.1		Gnuserv man page
+gnuserv.README		Original README file from gnuserv
+gray1.xbm		Gray bitmap
+idd/			?
+package-index.LATEST.gpg ?
+photos/*		Various pictures of XEmacs developers
+recycle.xpm
+recycle2.xpm		Two versions of oversized Recycle cursor
+refcard.ps.gz		Postscript version of XEmacs reference card
+refcard.tex		XEmacs reference card
+sample.Xdefaults	(legacy -- to be removed)
+sample.Xresources	Example ~/.Xresources file
+sample.init.el		Example ~/.xemacs/init.el file
+sparcworks/		Support files for Sparcworks
+tests/			Testcases for external widget
+toolbar/		Image files for the toolbar
+trash.xpm		Garbage can icon
+unicode/		Unicode conversion tables
+xemacs-beta.xpm		XEmacs Beta logo
+xemacs-enhanced.png	"XEmacs-enhanced" logo
+xemacs-fe.sh		XEmacs frontend driver
+xemacs-icon.xpm
+xemacs-icon2.xbm
+xemacs-icon2.xpm
+xemacs-icon3.xpm	Various versions of an XEmacs WM icon
+xemacs.1		XEmacs man page
+xemacs.xbm
+xemacs.xpm		XEmacs logo used on the splash screen

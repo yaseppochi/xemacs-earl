@@ -1,60 +1,20 @@
-# Compiled Emacs Lisp and Emacs editor backups
-*.elc
 *~
-
-# Tom Lord conventions for build directories (+) and scratch files (,)
+*.rej
+*.orig
+_darcs
+CVS
+TAGS
+GNUmakefile
+Makefile
+Makefile.in
+config.*
+autom4te.cache
+configure
 +*
-,*
-
-# Prerequisites
-*.d
-
-# Object files
-*.o
-*.ko
-*.obj
-*.elf
-
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
-
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
-
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
+*.elc
+auto-autoloads.el
+custom-load.el
+finder-inf.el
+*.info
+*.info-[0-9]
+*.info-[0-9][0-9]
