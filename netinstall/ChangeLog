@@ -1,3 +1,13 @@
+2005-11-13  Ben Wing  <ben@xemacs.org>
+
+	* Makefile.in.in:
+	Add targets distclean-noconfig, realclean-noconfig, extraclean-noconfig.
+	Do some refactoring for cleanliness.
+
+2005-11-06  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* ChangeLog: Nuke useless CVS keyword.
+
 2005-10-26  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* XEmacs 21.5.23 "daikon" is released.
@@ -523,7 +533,4 @@
 2000-11-12  Andy Piper  <andy@xemacs.org>
 
 	* all: port from cygwin setup.
-
-%%% $Id: ChangeLog,v 1.37 2005/10/26 15:14:20 stephent Exp $
-$Revision: 1.37 $
 

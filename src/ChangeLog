@@ -1,3 +1,99 @@
+2005-11-18  Aidan Kehoe  <kehoea@parhasard.net>
+
+	* window.c (change_window_height): Have change_window_height
+	change the window width when requested to do so; fixes bugs and
+	error messages with VM, BBDB. 
+
+2005-11-16  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* sound.c (USED_IF_HAVE_NATIVE_OR_NAS, USED_IF_HAVE_ANY):
+	New conditional UNUSED macros.
+	(Fplay_sound_file, Fdevice_sound_enabled_p, init_device_sound):
+	Use them.
+
+2005-11-16  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* event-Xt.c (x_to_emacs_keysym): Initialize len.
+
+2005-11-16  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* database.c: Don't redefine integer types for Mac OS X, either.
+
+2005-11-13  Ben Wing  <ben@xemacs.org>
+
+	* alloc.c:
+	* alloc.c (alloc_lrecord):
+	* alloc.c (noseeum_alloc_lrecord):
+	* alloc.c (make_uninit_string):
+	* alloc.c (Fmake_string):
+	* alloc.c (make_string_nocopy):
+	* lrecord.h:
+	* lrecord.h (struct lrecord_header):
+	* lrecord.h (set_lheader_implementation):
+	Move around the handling of setting of lheader->uid so it's in
+	set_lheader_implementation() -- that way, even non-MC-ALLOC builds
+	get useful uid's in their bare lrecords.  Redo related code for
+	strings so the non-ascii count that is stored in the uid isn't hosed.
+	
+	* events.c:
+	* events.c (deinitialize_event):
+	* events.c (zero_event):
+	Save and restore the uid around event zeroing/deadbeefing.
+	
+	* lisp.h:
+	Set the correct value of MAX_STRING_ASCII_BEGIN under MC_ALLOC.
+	
+	* lisp.h (ZEROP):
+	* lisp.h (XINT):
+	* lisp.h (CHECK_INT):
+	* lisp.h (CONCHECK_INT):
+	* lisp.h (NATNUMP):
+	* lisp.h (CHECK_NATNUM):
+	* lisp.h (CONCHECK_NATNUM):
+	* lisp.h (XCHAR):
+	* lisp.h (XCHAR_OR_INT):
+	* lisp.h (CHAR_INTP):
+	rearrange the basic code handling ints and chars.  basic int stuff goes
+	first, followed by basic char stuff, followed in turn by stuff that
+	mixes ints and chars.  this is required since some basic defn's have
+	become inline functions.
+
+	XCHAR and CHARP have additional error-checking in that they check to make
+	sure that the value in question is not just a character but a valid
+	character (i.e. its numeric value is valid).
+	
+	* print.c:
+	* print.c (debug_p4):
+	debug_p4 now has a useful UID in all cases and uses it; but it also prints
+	the raw header address (previously, you just got one of them).
+	* text.h:
+	some basic char defn's that belonged in lisp.h have been moved there.
+	valid_ichar_p() is moved too since the inline functions need it.
+
+2005-11-13  Ben Wing  <ben@xemacs.org>
+
+	* Makefile.in.in (distclean-noconfig):
+	Add targets distclean-noconfig, realclean-noconfig, extraclean-noconfig.
+	Do some refactoring for cleanliness.
+
+2005-11-07  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* inline.c: Include modules headers regardless of HAVE_SHLIB.
+
+2005-11-02  Marcus Crestani  <crestani@xemacs.org>
+
+	* realpath.c (readlink_or_correct_case): Move the closing paren
+	outside the ifdef.
+
+2005-11-02  Marcus Crestani  <crestani@xemacs.org>
+
+	* realpath.c (readlink_or_correct_case): Mark parameter as unused.
+
+2005-10-29  Steve Youngs  <steve@sxemacs.org>
+
+	* unexelf.c (unexec): Fix data types.
+	From: Andrey Slusar <anrays@gmail.com>
+
 2005-10-26  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* XEmacs 21.5.23 "daikon" is released.
@@ -2351,7 +2447,9 @@
 
 2004-12-15  Stephen J. Turnbull  <stephen@xemacs.org>
 
-	* EmacsManager.c (EmacsManagerChangeSize): Respect XtGeometryNo.
+	* EmacsManager.c (EmacsManagerChangeSize): Respect XtGeometryNo,
+	and exit immediately if geometry change refused.  Fixes notorious
+	metacity maximize bug.
 
 2004-12-07  Malcolm Purvis  <malcolmp@xemacs.org>
 

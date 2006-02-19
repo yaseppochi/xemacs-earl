@@ -89,13 +89,17 @@ Boston, MA 02111-1307, USA.  */
 static void RadioInit (Widget, Widget, ArgList, Cardinal *);
 static void RadioExpose (Widget, XEvent *, Region);
 static void RadioResize (Widget);
-static void RadioDestroy (Widget, XtPointer, XtPointer);
 static void RadioClassInit (void);
 static void RadioClassPartInit (WidgetClass);
 static Boolean RadioSetValues (Widget, Widget, Widget, ArgList, Cardinal *);
 static void DrawDiamond (Widget);
 static XtGeometryResult RadioQueryGeometry (Widget, XtWidgetGeometry *,
 					    XtWidgetGeometry *);
+#if 0
+/* #### This function isn't used and is slated for destruction.
+   Can we just nuke it? */
+static void RadioDestroy (Widget, XtPointer, XtPointer);
+#endif
 
 	/* Action procs */
 
@@ -218,11 +222,11 @@ RadioClassPartInit (WidgetClass class_)
 /*ARGSUSED*/
 static void
 RadioInit (Widget   request,
-	   Widget   new,
+	   Widget   new_,
 	   ArgList  UNUSED (args),
 	   Cardinal *UNUSED (num_args))
 {
-    RadioWidget rw = (RadioWidget) new;
+    RadioWidget rw = (RadioWidget) new_;
     RadioWidget rw_req = (RadioWidget) request;
     Dimension	w,h ;
 
@@ -234,7 +238,7 @@ RadioInit (Widget   request,
 	rw->core.width = w ;
       if( rw_req->core.height == 0 )
 	rw->core.height = h ;
-      rw->core.widget_class->core_class.resize(new) ;
+      rw->core.widget_class->core_class.resize(new_) ;
     }
 }
 
@@ -245,6 +249,9 @@ RadioInit (Widget   request,
  *	Returns: none.
  */
 
+#if 0
+/* #### This function isn't used and is slated for destruction.
+   Can we just nuke it? */
 /* ARGSUSED */
 static void
 RadioDestroy (Widget UNUSED (w),
@@ -253,7 +260,7 @@ RadioDestroy (Widget UNUSED (w),
 {
 	/* TODO: get rid of this */
 }
-
+#endif
 
 /* React to size change from manager.  Label widget will compute some internal
  * stuff, but we need to override.  This code requires knowledge of the
@@ -345,12 +352,12 @@ RadioExpose (Widget w,
 static Boolean
 RadioSetValues (Widget   current,
 		Widget   UNUSED (request),
-		Widget   new,
+		Widget   new_,
 		ArgList  UNUSED (args),
 		Cardinal *UNUSED (num_args))
 {
     RadioWidget oldrw = (RadioWidget) current;
-    RadioWidget newrw = (RadioWidget) new;
+    RadioWidget newrw = (RadioWidget) new_;
 
     /* Need to find out if the size of the widget changed.  Set new size
      * if it did and resize is permitted.  One way to determine of the
@@ -373,7 +380,7 @@ RadioSetValues (Widget   current,
      */
     if (newrw->label.label_x != oldrw->label.label_x)
     {
-      RadioResize (new);
+      RadioResize (new_);
     }
     return FALSE ;
 }

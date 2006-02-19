@@ -109,6 +109,7 @@
 
 (define-key help-map "p" 'finder-by-keyword)
 (define-key help-map "\C-p" 'describe-pointer)
+(define-key help-map "P" 'view-xemacs-problems)
 
 (define-key help-map "q" 'help-quit)
 
@@ -840,6 +841,11 @@ of the key sequence that ran this command."
   (interactive)
   (Help-find-file (expand-file-name "NEWS" data-directory)))
 
+(defun view-xemacs-problems ()
+  "Display known problems with XEmacs."
+  (interactive)
+  (Help-find-file (expand-file-name "PROBLEMS" data-directory)))
+
 (defun xemacs-www-page ()
   "Go to the XEmacs World Wide Web page."
   (interactive)
@@ -995,6 +1001,7 @@ Miscellaneous:
 "
 "")
 "
+\\[view-xemacs-problems]	Known problems.
 \\[customize]	Customize Emacs options.
 \\[describe-distribution]	How to obtain XEmacs.
 \\[describe-last-error]	Information about the most recent error.
@@ -1186,7 +1193,8 @@ arguments in the standard Lisp style."
 		 (nth 1 fndef))
 		((subrp fndef)
 		 (let* ((doc (documentation function))
-			(args (and (string-match
+			(args (and doc
+				   (string-match
 				    "[\n\t ]*\narguments: ?(\\(.*\\))\n?\\'"
 				    doc)
 				   (match-string 1 doc))))

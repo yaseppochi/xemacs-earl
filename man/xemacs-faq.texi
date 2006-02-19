@@ -7,7 +7,7 @@
 @finalout
 @titlepage
 @title XEmacs FAQ
-@subtitle Frequently asked questions about XEmacs @* Last Modified: $Date: 2005/10/24 20:39:47 $
+@subtitle Frequently asked questions about XEmacs @* Last Modified: $Date: 2005/11/06 16:14:09 $
 @sp 1
 @author Ben Wing <ben@@xemacs.org>
 @author Tony Rossini <rossini@@u.washington.edu>

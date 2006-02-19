@@ -3,6 +3,7 @@
 ##   Copyright (C) 1995 Tinker Systems and INS Engineering Corp.
 ##   Copyright (C) 1994, 1995 Board of Trustees, University of Illinois
 ##   Copyright (C) 1996, 1997 Sun Microsystems, Inc.
+##   Copyright (C) 2005 Ben Wing.
 
 ## This file is part of the Lucid Widget Library.
 
@@ -48,7 +49,7 @@ vpath %.h @srcdir@
 VPATH=@srcdir@
 #endif
 
-objs = lwlib.o lwlib-utils.o @lwlib_objs@
+objs = lwlib.o lwlib-utils.o lwlib-colors.o lwlib-fonts.o @lwlib_objs@
 
 all: liblw.a
 
@@ -82,13 +83,21 @@ liblw.a: $(objs)
 	@-test -n "$(RANLIB)" && $(RANLIB) $@
 
 .PHONY: mostlyclean clean distclean realclean extraclean
+.PHONY: distclean-noconfig realclean-noconfig extraclean-noconfig
 mostlyclean:
 	$(RM) liblw.a liblw_pure_*.a *.o *.i core
 clean: mostlyclean
-distclean: clean
-	$(RM) GNUmakefile Makefile Makefile.in config.h TAGS
+distclean-noconfig: clean
+	$(RM) config.h TAGS
+## This is used in making a distribution.
+## Do not use it on development directories!
+distclean: distclean-noconfig
+	$(RM) GNUmakefile Makefile Makefile.in
+realclean-noconfig: distclean-noconfig
 realclean: distclean
-extraclean: distclean
+extraclean-noconfig: realclean-noconfig
+	$(RM) *~ \#*
+extraclean: realclean
 	$(RM) *~ \#*
 
 CONFIG_H = ../src/config.h config.h
@@ -101,6 +110,8 @@ lwlib-Xlw.o:	$(CONFIG_H) lwlib-Xlw.h lwlib-internal.h lwlib.h xlwmenu.h xlwscrol
 xlwtabs.h xlwgcs.h
 lwlib-Xm.o:	$(CONFIG_H) lwlib-Xm.h lwlib-internal.h lwlib-utils.h lwlib.h xlwmenu.h
 lwlib-utils.o:	$(CONFIG_H) lwlib-utils.h
+lwlib-colors.o:	$(CONFIG_H) lwlib-colors.h
+lwlib-fonts.o:	$(CONFIG_H) lwlib-fonts.h
 lwlib.o:	$(CONFIG_H) lwlib-Xaw.h lwlib-Xlw.h lwlib-Xm.h lwlib-internal.h lwlib-utils.h lwlib.h xlwmenu.h
 xlwmenu.o:	$(CONFIG_H) lwlib.h xlwmenu.h xlwmenuP.h
 xlwscrollbar.o:	$(CONFIG_H) xlwscrollbar.h xlwscrollbarP.h

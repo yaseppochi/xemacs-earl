@@ -41,6 +41,8 @@
 ;; authored for 19.12 by Chuck Thompson <cthomp@cs.uiuc.edu>,
 ;; rewritten by Ben Wing with the advent of specifiers.
 
+;; Face refactoring: this file's API is *compatible* with the API
+;; proposed in fontconfig.el.  Implementation is *unchecked*.
 
 ;;; Some stuff in FSF's faces.el is in our x-faces.el.
 
@@ -49,7 +51,8 @@
 ;; To elude the warnings for font functions. (Normally autoloaded when
 ;; font-create-object is called)
 (eval-when-compile
-  (require 'font))
+  (require 'font)
+  (load "cl-macs"))
 
 (defgroup faces nil
   "Support for multiple text attributes (fonts, colors, ...)

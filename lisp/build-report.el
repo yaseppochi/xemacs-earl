@@ -3,8 +3,8 @@
 ;; Copyright (C) 1997-2003 Adrian Aichner
 
 ;; Author: Adrian Aichner <adrian@xemacs.org>
-;; Date: $Date: 2005/10/21 10:34:35 $
-;; Version: $Revision: 1.14 $
+;; Date: $Date: 2005/11/06 16:13:56 $
+;; Version: $Revision: 1.11.6.1 $
 ;; Keywords: internal
 
 ;; This file is part of XEmacs.

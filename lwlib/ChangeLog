@@ -1,3 +1,24 @@
+2005-11-16  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* xlwcheckbox.c (CheckboxInit): Mark unused parameters.  C++
+	correctness.
+	(CheckboxRealize): Don't compile at all if unused.
+
+	* xlwradio.c (RadioDestroy): #if 0 dead code for later removal.
+
+2005-11-13  Ben Wing  <ben@xemacs.org>
+
+	* Makefile.in.in:
+	Add targets distclean-noconfig, realclean-noconfig, extraclean-noconfig.
+	Do some refactoring for cleanliness.
+
+2005-11-08  Marcus Crestani  <crestani@xemacs.org>
+
+	* xlwgauge.c (GaugeInit):
+	* xlwgauge.c (GaugeSetValues):
+	* xlwradio.c (RadioInit):
+	* xlwradio.c (RadioSetValues): Rename new->new_.
+
 2005-10-26  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* XEmacs 21.5.23 "daikon" is released.

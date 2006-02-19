@@ -1,3 +1,23 @@
+2005-11-08  Malcolm Purvis  <malcolmp@xemacs.org>
+
+	* internals/internals.texi (The configure Script):  Added the
+	definition of the new macro XE_HELP_SUBSECTION.
+
+2005-11-13  Ben Wing  <ben@xemacs.org>
+
+	* Makefile:
+	Add targets distclean-noconfig, realclean-noconfig, extraclean-noconfig.
+	Do some refactoring for cleanliness.
+
+2005-11-13  Ben Wing  <ben@xemacs.org>
+
+	* internals/internals.texi (Top):
+	* internals/internals.texi (CVS Techniques):
+	* internals/internals.texi (Creating a Branch):
+	* internals/internals.texi (Merging a Branch into the Trunk):
+	Add node on Creating a Branch.  Update info concerning problems
+	with rtag on symlinks. (#### Is this still valid?)
+
 2005-10-26  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* XEmacs 21.5.23 "daikon" is released.
@@ -163,7 +183,7 @@
 	for evaluation in Lisp interaction mode, and should be documented
 	as such.
 
-2005-04-18  Turnbull Stephen  <stephen@xemacs.org>
+2005-04-18  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* internals/internals.texi
 	(Better Rendering Support -- Modern Font Support):

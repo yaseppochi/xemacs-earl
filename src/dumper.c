@@ -1624,6 +1624,11 @@ pdump_dump_cv_ptr_info (void)
   retry_fwrite (data, sizeof (pdump_cv_ptr_dump_info), count, pdump_out); 
 }
 
+/* Dump out the root block pointers, part of stage 3 (the "WRITE" stage) of
+   dumping.  For each pointer we dump out a structure containing the
+   location of the pointer and its value, replaced by the appropriate
+   offset into the dumped data. */
+
 static void
 pdump_dump_root_block_ptrs (void)
 {
