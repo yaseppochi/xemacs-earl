@@ -1,15 +1,16 @@
 *~
 *.rej
 *.orig
+_darcs
+CVS
+TAGS
 GNUmakefile
 Makefile
 Makefile.in
 config.*
 autom4te.cache
 configure
-TAGS
 +*
-_darcs
 *.elc
 auto-autoloads.el
 custom-load.el
@@ -17,3 +18,5 @@ finder-inf.el
 *.info
 *.info-[0-9]
 *.info-[0-9][0-9]
+modules/neon/neon-test-user.el
+.gdb_history
