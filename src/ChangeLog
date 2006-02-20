@@ -1,3 +1,12 @@
+2006-01-19  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	I'm seeing default face height or width == 0 in Xft builds, which
+	asserts or (worse) causes an FPE error later.  Catch 'em early!
+
+	* faces.c (default_face_font_info): Error check return values.
+	* lisp.h (glyphs_checking_assert): Define these asserts.
+	* config.h.in (ERROR_CHECK_GLYPHS): Comment: we include fonts.
+
 2006-01-11  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* objects-x.c (x_finalize_font_instance): Add trace of apparently

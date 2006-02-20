@@ -742,16 +742,24 @@ default_face_font_info (Lisp_Object domain, int *ascent, int *descent,
       font_instance = FACE_FONT (Vdefault_face, domain, Vcharset_ascii);
     }
 
-  if (height)
-    *height = XFONT_INSTANCE (font_instance)->height;
-  if (width)
-    *width = XFONT_INSTANCE (font_instance)->width;
-  if (ascent)
-    *ascent = XFONT_INSTANCE (font_instance)->ascent;
-  if (descent)
-    *descent = XFONT_INSTANCE (font_instance)->descent;
-  if (proportional_p)
-    *proportional_p = XFONT_INSTANCE (font_instance)->proportional_p;
+#define DONT_ASSERT_ME 1
+#define MAYBE_SET_RETURN_VALUE(variable,assertion)	    \
+  do {                                                      \
+    if (variable) {					    \
+      *variable = XFONT_INSTANCE (font_instance)->variable; \
+      glyphs_checking_assert (assertion);		    \
+    }                                                       \
+  } while (0)
+
+  /* VARIABLE is the _name_, so in ASSERTION it must be dereferenced. */
+  MAYBE_SET_RETURN_VALUE (height, *height > 0);
+  MAYBE_SET_RETURN_VALUE (width, *width > 0);
+  /* are there interesting assertions to make about these? */
+  MAYBE_SET_RETURN_VALUE (ascent, DONT_ASSERT_ME);
+  MAYBE_SET_RETURN_VALUE (descent, DONT_ASSERT_ME);
+  MAYBE_SET_RETURN_VALUE (proportional_p, DONT_ASSERT_ME);
+#undef MAYBE_SET_RETURN_VALUE
+#undef DONT_ASSERT_ME
 }
 
 void

@@ -155,6 +155,17 @@ Boston, MA 02111-1307, USA.  */
 #define text_checking_assert_at_line(assertion, file, line)
 #define text_checking_assert_with_message(assertion, msg)
 #endif
+#ifdef ERROR_CHECK_GLYPHS
+#define glyphs_checking_assert(assertion) assert (assertion)
+#define glyphs_checking_assert_at_line(assertion, file, line) \
+  assert_at_line (assertion, file, line)
+#define glyphs_checking_assert_with_message(assertion, msg) \
+  assert_with_message (assertion, msg)
+#else
+#define glyphs_checking_assert(assertion)
+#define glyphs_checking_assert_at_line(assertion, file, line)
+#define glyphs_checking_assert_with_message(assertion, msg)
+#endif
 #ifdef ERROR_CHECK_TRAPPING_PROBLEMS
 #define trapping_problems_checking_assert(assertion) assert (assertion)
 #define trapping_problems_checking_assert_at_line(assertion, file, line) \
