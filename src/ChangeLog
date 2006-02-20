@@ -1,5 +1,9 @@
 2006-02-20  Stephen J. Turnbull  <stephen@xemacs.org>
 
+	* objects-x.c (x_font_instance_truename): Fix MULE string conversions.
+
+2006-02-20  Stephen J. Turnbull  <stephen@xemacs.org>
+
 	* xft-fonts.c (fc_standard_properties): Casting out devils.
 
 2006-01-19  Stephen J. Turnbull  <stephen@xemacs.org>
