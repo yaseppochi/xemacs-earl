@@ -191,7 +191,7 @@ Optional AUTH is an authentication callback."
 	(result "")
 	(case-fold-search t))
     (insert "\n")
-    (let ((response-headers (plist-get (session-handle-plist session)
+    (let ((response-headers (plist-get (object-plist session)
 				       'last-response-headers)))
       (while response-headers
 	(insert (format "%S" (car response-headers)))

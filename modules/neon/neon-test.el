@@ -98,7 +98,7 @@ Optional AUTH is a boolean indicating whether a authentication callback was
 	           mh test-path "OPTIONS"  'raw 'accept-always nil nil))
   (goto-char (point-max))
   (insert "\n")
-  (let ((response-headers (plist-get (session-handle-plist mh)
+  (let ((response-headers (plist-get (object-plist mh)
 				     'last-response-headers)))
     (while response-headers
       (insert (format "%S %S\n"

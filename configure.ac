@@ -831,6 +831,9 @@ XE_MERGED_ARG([postgresql],
 	AC_HELP_STRING([--with-postgresql],[Support the PostgreSQL RDBMS.]),
 	[], [])
 XE_MERGED_ARG([neon],
+	AC_HELP_STRING([--with-earl],[Support URL-based extensions.]),
+	[], [])
+XE_MERGED_ARG([neon],
 	AC_HELP_STRING([--with-neon],[Support the libneon API.]),
 	[], [])
 XE_MERGED_ARG([curl],
@@ -3866,6 +3869,10 @@ if test "$with_curl" = "yes"; then
   if test "$have_curl_config" = "no"; then
     with_curl=no
   else
+    if test "$with_earl" != "yes"; then
+      AC_MSG_WARN([earl support required by cURL; forcing to yes])
+      with_earl=yes
+    fi
     XE_APPEND(`curl-config --cflags`, c_switch_site)
     curl_libs=`curl-config --libs`
     XE_APPEND(modules/curl, MAKE_SUBDIR)
@@ -3879,7 +3886,7 @@ if test "$with_curl" = "yes"; then
     XE_DIE([Cannot fulfil --with-curl, curl-config not found.])
   fi
 fi
-AC_SUBST(curl_libs) 
+AC_SUBST(curl_libs)
 
 dnl Configure libneon
 neon_libs=''
@@ -3889,6 +3896,10 @@ if test "$with_neon" = "yes"; then
   if test "$have_neon_config" = "no"; then
     with_neon=no
   else
+    if test "$with_earl" != "yes"; then
+      AC_MSG_WARN([earl support required by neon; forcing to yes])
+      with_earl=yes
+    fi
     XE_APPEND(`neon-config --cflags`, c_switch_site)
     neon_libs=`neon-config --libs`
     XE_APPEND(modules/neon, MAKE_SUBDIR)
@@ -3902,14 +3913,33 @@ if test "$with_neon" = "yes"; then
     XE_DIE([Cannot fulfil --with-neon, neon-config not found.])
   fi
 fi
-AC_SUBST(neon_libs) 
+AC_SUBST(neon_libs)
 
+dnl configure earl
+if test "$with_earl" = "yes"; then
+  XE_APPEND(modules/earl, MAKE_SUBDIR)
+  need_modules_common=yes
+  if test "$enable_modules" = "yes"; then
+    XE_APPEND(modules/earl, INSTALL_ARCH_DEP_SUBDIR)
+  fi
+  AC_DEFINE(HAVE_EARL)
+fi
+  
 dnl Configure libgit
 git_libs=''
 if test "$with_git" = "yes"; then
   AC_CHECKING([for git])
-  git_libs=-lgit
-  AC_MSG_RESULT([Building in support for git])
+  # #### what do we check? set result
+  if test "$have_git" = "yes"; then
+    git_libs=-lgit
+    XE_APPEND(modules/git, MAKE_SUBDIR)
+    need_modules_common=yes
+    if test "$enable_modules" = "yes"; then
+      XE_APPEND(modules/git, INSTALL_ARCH_DEP_SUBDIR)
+    fi
+    AC_DEFINE(HAVE_GIT)
+  fi
+  AC_MSG_RESULT($have_git)
 fi  
 
 dnl ----------------------
@@ -6014,6 +6044,7 @@ test -n "$with_mail_locking" && echo "  Compiling in support for \"$with_mail_lo
 
 echo "
 Network and Distributed Applications:"
+test "$with_earl" = yes && echo "  Compiling in earl support for URLs."
 test "$with_curl" = yes && echo "  Compiling in support for libcurl API."
 test "$with_neon" = yes && echo "  Compiling in support for libneon API."
 test "$with_git" = yes && echo "  Compiling in support for libgit API."

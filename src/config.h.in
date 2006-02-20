@@ -537,6 +537,9 @@ things are arranged in config.h.in.  In particular:
 /* main PostgreSQL header file */
 #undef LIBPQ_FE_H_FILE
 
+/* Do we use common earl utilities for curl and neon support? */
+#undef HAVE_EARL
+
 /* Do we have libcurl support? */
 #undef HAVE_CURL
 
@@ -596,7 +599,7 @@ things are arranged in config.h.in.  In particular:
 #undef ERROR_CHECK_BYTE_CODE
 
 /* Minor sanity checking of glyphs, especially subwindows and
-   widgets. */
+   widgets, including fonts. */
 #undef ERROR_CHECK_GLYPHS
 
 /* Sanity-check the redisplay structures after each modification. */

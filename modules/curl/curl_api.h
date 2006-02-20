@@ -1,3 +1,5 @@
+#ifndef include_CURL_API_H
+#define include_CURL_API_H
 /*
  * Lisp interface to libcurl for XEmacs.
  *
@@ -14,6 +16,7 @@
  *
  * Author:		Stephen J. Turnbull <stephen@xemacs.org>
  * Creation-Date:	2005-11-23
+ * Last-Modified:	2006-01-15
  */
 
 #include <curl/curl.h>
@@ -31,8 +34,10 @@
 /*				Structures				*/
 /************************************************************************/
 
-/* This is URL_Handle, not Curl_Handle, because a generalization is
-   planned. */
+#ifdef HAVE_EARL
+#include "../earl/earl.h"
+#else
+/* #### This needs to be updated to correspond to earl.h. */
 struct Lisp_URL_Handle
 {
   struct LCRECORD_HEADER header;
@@ -61,4 +66,6 @@ DECLARE_LRECORD (url_handle, Lisp_URL_Handle);
 #define URL_HANDLEP(x) RECORDP (x, url_handle)
 #define CHECK_URL_HANDLE(x) CHECK_RECORD (x, url_handle)
 #define CONCHECK_URL_HANDLE(x) CONCHECK_RECORD (x, url_handle)
+#endif /* HAVE_EARL */
 
+#endif include_CURL_API_H

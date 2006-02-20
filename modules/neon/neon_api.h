@@ -1,9 +1,11 @@
+#ifndef include_NEON_API_H
+#define include_NEON_API_H
 /*
  * Lisp interface to libneon for XEmacs.
  *
  * Copyright (C) 1998, 1999 J. Kean Johnston. All rights reserved.
  * Copyright (C) 2002 Jerry James.
- * Copyright (C) 2005 Stephen J. Turnbull <stephen@xemacs.org>
+ * Copyright (C) 2005, 2006 Stephen J. Turnbull <stephen@xemacs.org>
  *
  * All rights reserved, except as expressly indicated below.
  *
@@ -14,6 +16,7 @@
  *
  * Author:		Stephen J. Turnbull <stephen@xemacs.org>
  * Creation-Date:	2005-11-23
+ * Last-Modified:	2006-01-12
  */
 
 /* Commentary:
@@ -25,9 +28,6 @@
  * destroy it at the appropriate time.
  */
 
-#ifdef HAVE_EARL
-#include "earl.h"
-#endif
 #include <neon/ne_request.h>	/* include ne_session.h,
 				   ne_utils.h, ne_string.h,
 				   ne_defs.h, ne_ssl.h, ne_uri.h */
@@ -80,7 +80,9 @@ DECLARE_LRECORD (neon_data, Lisp_Neon_Data);
 #define CONCHECK_NEON_DATA(x) CONCHECK_RECORD (x, neon_data)
 #endif
 
-#ifndef HAVE_EARL
+/* maybe we can just nuke the #ifdef since these should be identical? */
+#include "../earl/earl.h"
+#if 0
 /* This is Session_Handle, not Neon_Handle, because a generalization is
    planned. */
 struct Lisp_Session_Handle
@@ -105,23 +107,13 @@ struct Lisp_Session_Handle
   Lisp_Object stuff;
   Lisp_Object last_response_status;
   Lisp_Object last_response_headers;
-  /* #### the transport-specific handles may want to be a union */
-  /* These could be a linked list of low-level-module-specific structures.
-     Actually, a single session_handle->handler_info member to be cast to
-     `TRANSPORT_handler_info *' should be enough, since we know the transport.
-     This would allow resetting transport, too. */
-#ifdef HAVE_CURL
-  /* the curl handle used by the libcurl API */
-  CURL *curl_handle;
-#endif
-#ifdef HAVE_NEON
-  struct neon_data* neon;
-#endif
+  /* to be cast to `TRANSPORT_data *', since we know the transport.
+     This should allow resetting transport, too. */
+  void* transport_data;
   /* #### UNIMPLEMENTED array of pointers to string data we need to free */
   Dynarr *big_ball_of_strings;
 };
 typedef struct Lisp_Session_Handle Lisp_Session_Handle;
-#endif
 
 DECLARE_LRECORD (session_handle, Lisp_Session_Handle);
 #define XSESSION_HANDLE(x) XRECORD (x, session_handle, Lisp_Session_Handle)
@@ -130,9 +122,13 @@ DECLARE_LRECORD (session_handle, Lisp_Session_Handle);
 #define CHECK_SESSION_HANDLE(x) CHECK_RECORD (x, session_handle)
 #define CONCHECK_SESSION_HANDLE(x) CONCHECK_RECORD (x, session_handle)
 
+#define NEON_DATA(handle) ((struct neon_data *) (handle->transport_data))
+
 /* utilities */
 
 /* error macros */
 
 #define UNIMPLEMENTED(reason) signal_error (Qunimplemented, reason, Qunbound)
+#endif /* 0 */
 
+#endif /* include_NEON_API_H */

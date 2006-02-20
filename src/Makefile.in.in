@@ -218,6 +218,12 @@ number_objs=number-mp.o number.o
 postgresql_objs=$(BLDMODULES)/postgresql/postgresql.o
 #endif
 
+## because of the restriction on sharing symbols across modules,
+## earl is always built-in
+#if defined(HAVE_EARL)
+earl_objs=$(BLDMODULES)/earl/earl.o
+#endif
+
 #if defined(HAVE_CURL) && !defined(HAVE_SHLIB)
 curl_objs=$(BLDMODULES)/curl/curl_api.o
 #endif
@@ -284,7 +290,7 @@ objs=\
  console-stream.o $(curl_objs)\
  data.o $(database_objs) $(debug_objs) device.o dired.o doc.o doprnt.o\
  dynarr.o\
- editfns.o elhash.o emacs.o emodules.o eval.o events.o\
+ $(earl_objs) editfns.o elhash.o emacs.o emodules.o eval.o events.o\
  event-stream.o $(event_unixoid_objs) $(extra_objs) extents.o\
  faces.o file-coding.o fileio.o $(LOCK_OBJ) filemode.o floatfns.o fns.o\
  font-lock.o frame.o\

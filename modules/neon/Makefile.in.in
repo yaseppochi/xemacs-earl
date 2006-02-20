@@ -19,13 +19,32 @@
 ## the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ## Boston, MA 02111-1307, USA.
 
-## Synched up with: Not synched with FSF.
+## Synched up with: Not available in GNU Emacs.
 
-### Specialize this part for your module
+### Specialize this part for your module.
+
+## Since "config.h" is included by modules/common/Makefile.common, I
+## guess symbols defined there could be referenced in the definitions
+## below?
+
+## The MODNAME must be a legal C identifier, and need not be the same as
+## the name of the object file.
 MODNAME=neon_api
+
+## MODVER may be checked by the module loading code.
 MODVER=0.5.0
+
+## A comment for human consumption.
 MODTITLE="Interface to libneon for XEmacs"
-LDFLAGS=@LDFLAGS@ @neon_libs@
+
+## The sources for objects to be linked into the module object.
 SRCS=$(MODNAME).c
+
+## Any options for the linker other than the output object (usually
+## $(MODNAME).ell), the objects to be linked, and a set of standard
+## ELL-specific flags.  Library search paths and libraries will usually
+## be computed by configure, and then specified here (typically as
+## @VAR@ substitutions).
+LDFLAGS=@LDFLAGS@ @neon_libs@
 
 ## Note: modules/common/Makefile.common will be appended by configure

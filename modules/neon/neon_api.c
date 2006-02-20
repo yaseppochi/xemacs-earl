@@ -15,49 +15,55 @@
  *
  * Author:		Stephen J. Turnbull <stephen@xemacs.org>
  * Creation-Date:	2005-12-04
- * Last-Modified:	2006-01-03
+ * Last-Modified:	2006-01-12
  */
 
 /* TODO
 36 matches for "####" in buffer: neon_api.c
-     71:  cURL docs: URL_HANDLE identifiers renamed to SESSION_HANDLE
-     85:  doc and review: the whole neon API
-    XXX:  reorganize this file
+     77:  cURL docs: URL_HANDLE identifiers renamed to SESSION_HANDLE
+    XXX:  doc and review: the whole neon API
     XXX:  refactor: earl module
-   1458:  These functions will move to the earl module.
-   1481:  These symbols will move to the earl module.
+   1746:  These functions will move to the earl module.
+   1782:  These symbols will move to the earl module.
+    386:  extract properties from the curl_handle and add to retval here
+    387:  should we do curl_get_info here?
+    390:  extract properties from the neon_data and add to retval here
     184:  transport-specific pointer blocks should be one pointer to structures
+    XXX:  big_ball_of_strings:
+    256:  initialize the big_ball_of_strings here.
+    283:  free the big_ball_of_strings here.
+    XXX:  review coding-system usage, especially the session member
+   1417:  return Qnil;		// maybe should be Qt?
+   1427:  should we get the neon error string here, or provide an API?
+   1004:  This strategy has problems, because if the operation fails, the
+   1629:  abort if EQ (current, header) here?
+   1630:  abort if NILP (Fcdr (current)) here?
+   1503:  the return code should be checked here, perhaps?
+   1660:  ugly hack
+   1677:  these are user errors, maybe should return non-zero to libneon?
+   1208:  unfortunately we can't set RESPONSE here
+   1246:  Use eistrings here?
+   1247:  MEMORY LEAK!!
+   1292:  Default is?
+   1800:  These aren't used but could be useful, see curl_api.
+   1832:  Anything to do here?  Nothing interesting is documented.
+   1849:  Anything to do here?  Nothing interesting is documented.
+*/
+
+/* DONE
+   2006-01-12
+    XXX:  reorganize this file
+    198:  do we ever actually use this?  should we?
+    189:  do we ever actually use this?  should we?
+    193:  currently a list, make it a plist?
     XXX:  implement property handling
     284:  Use DEFINE_LRECORD_IMPLEMENTATION_WITH_PROPS?
     336:  need sane property handling!
-    350:  extract properties from the curl_handle and add to retval here
-    193:  currently a list, make it a plist?
-    198:  do we ever actually use this?  should we?
-    XXX:  big_ball_of_strings:
-    212:  initialize the big_ball_of_strings here.
-    258:  free the big_ball_of_strings here.
-    401:  This string needs to be freed.
     378:  This interface may change to (&rest PLIST).
     380:  This is not called "make-neon-handle" because a more general module,
-    XXX:  review coding-system usage, especially the session member
-    189:  do we ever actually use this?  should we?
     391:  Quick hack, should be Qnative?
-    521:  return Qnil;		// maybe should be Qt?
-    531:  should we get the neon error string here, or provide an API?
-    818:  This strategy has problems, because if the operation fails, the
-    934:  abort if EQ (current, header) here?
-    935:  abort if NILP (Fcdr (current)) here?
-   1005:  the return code should be checked here, perhaps?
-   1073:  ugly hack
-   1090:  these are user errors, maybe should return non-zero to libneon?
-   1277:  unfortunately we can't set RESPONSE here
-   1315:  Use eistrings here?
-   1316:  MEMORY LEAK!!
-   1356:  Default is?
+    401:  This string needs to be freed.
    1379:  the errors in the following switch will leak an ne_xml_parser
-   1505:  These aren't used but could be useful, see curl_api.
-   1537:  Anything to do here?  Nothing interesting is documented.
-   1554:  Anything to do here?  Nothing interesting is documented.
 */
 
 /* Commentary: see neon_api.h for commentary on provided API. */
@@ -110,12 +116,10 @@
 #include "file-coding.h"
 #include "lstream.h"
 #include "elhash.h"
-
 /* #include <stdio.h> */
 #include "sysfile.h"
-#ifdef HAVE_EARL
-# include "earl.h"
-#endif
+
+#include "../earl/earl.h"
 #include "neon_api.h"		/* causes inclusion of libneon headers:
 				   ne_request.h, ne_session.h, ne_string.h,
 				   ne_utils.h, ne_defs.h, ne_ssl.h,
@@ -165,6 +169,7 @@ static Lisp_Object Qneon_api, Qneon, Qinfinity, Qwebdav_xml, Qaccept_always,
 /*                   neon-specific structure handling                   */
 /* Contents:								*/
 /*   struct neon_data							*/
+/*   allocate_neon_data							*/
 /*   finalize_neon_data							*/
 /************************************************************************/
 
@@ -198,6 +203,10 @@ void finalize_neon_data (struct neon_data *neon)
 }
 
 #ifndef HAVE_EARL
+#include "../earl/earl.c"
+#endif
+
+#if 0
 /************************************************************************/
 /*                 session_handle lrecord implementation                */
 /* Contents:								*/
@@ -241,12 +250,7 @@ allocate_session_handle (void)
   session_handle->plist = Qnil;
   session_handle->state = Qnil;
   session_handle->stuff = Qnil;
-#ifdef HAVE_CURL
-  session_handle->curl = 0;
-#endif
-#ifdef HAVE_NEON
-  session_handle->neon = 0;
-#endif
+  session_handle->transport_data = 0;
   /* #### UNIMPLEMENTED we need to initialize the big_ball_of_strings here. */
   return session_handle;
 }
@@ -272,7 +276,7 @@ finalize_session_handle (void *header, int for_disksave)
 	     (*finalizers[ll]) (session_handle);
   */
 
-  finalize_neon_data (session_handle->neon);
+  finalize_neon_data (NEON_DATA (session_handle));
 
   /* #### UNIMPLEMENTED we need to free the big_ball_of_strings here. */
 }
@@ -476,7 +480,7 @@ Return non-nil if SESSION_HANDLE is an active SESSION_HANDLE connection.
   CHECK_SESSION_HANDLE (session_handle);
   return Fget (session_handle, Qtransport, Qnil);
 }
-#endif /* !HAVE_EARL */
+#endif /* 0 */
 
 
 /************************************************************************/
@@ -485,6 +489,7 @@ Return non-nil if SESSION_HANDLE is an active SESSION_HANDLE connection.
 /*   neon-make-session-handle						*/
 /************************************************************************/
 
+#undef LAZY_INITIALIZATION_IN_REQUEST 
 #ifndef LAZY_INITIALIZATION_IN_REQUEST
 DEFUN ("neon-make-session-handle", Fneon_make_session_handle, 1, 2, 0, /*
 Return a neon session for URL, wrapped in a session handle.
@@ -500,8 +505,18 @@ with lazy initialization of neon-specific session attributes in
        (url, codesys))
 {
   /* validates URL and CODESYS */
-  Lisp_Object session = Fmake_session_handle (url, codesys);
-  Lisp_Session_Handle *handle = XSESSION_HANDLE (session);
+  Lisp_Object session;
+  Lisp_Session_Handle *handle;
+  {
+    /* due to module design, can't call Fmake_session_handle directly */
+    Lisp_Object args[3];
+    args[0] = intern ("make-session-handle");
+    args[1] = url;
+    args[2] = codesys;
+    session = Ffuncall (3, args);
+  }
+  /* handle = XSESSION_HANDLE (session); */
+  handle = (Lisp_Session_Handle *) (session);
 
   /* neon-specific
      #### maybe all of this can be done lazily in neon-request-create? */
@@ -517,14 +532,15 @@ with lazy initialization of neon-specific session attributes in
     if (!u.port && !(u.port = ne_uri_defaultport (u.scheme)))
       signal_error (Qio_error, "neon: could not determine port for URL", url);
 
-    handle->neon = allocate_neon_data ();
-    handle->neon->session = ne_session_create (u.scheme, u.host, u.port);
+    NEON_DATA (handle) = allocate_neon_data ();
+    NEON_DATA (handle)->session = ne_session_create (u.scheme, u.host, u.port);
     ne_uri_free (&u);
   }
   handle->state = Fmake_vector (make_int (NEON_STATE_SIZE), Qnil);
   handle->transport = Qneon;
 
-  return wrap_session_handle (handle);
+  /* return wrap_session_handle (handle); */
+  return session;
 }
 #endif
 
@@ -596,11 +612,11 @@ Returns no useful value \(nil).
   Lisp_Session_Handle *s;
 
   /* sanity check the session */
-  CHECK_SESSION_HANDLE (session);
+  /* CHECK_SESSION_HANDLE (session); */
   s = XSESSION_HANDLE (session);
   if (!EQ (s->transport, Qneon))
     wtaerror ("URL handle is not a neon handle", session);
-  if (!s->neon || !s->neon->session)
+  if (!NEON_DATA (s) || !NEON_DATA (s)->session)
     invalid_state ("session not open", session);
 
   /* sanity check the callbacks */
@@ -622,19 +638,19 @@ Returns no useful value \(nil).
   /* clear previous credentials to avoid registering cleanup callback
      multiple times */
   if (!NILP (server_cb) || !NILP (proxy_cb))
-    ne_forget_auth (s->neon->session);
+    ne_forget_auth (NEON_DATA (s)->session);
 
   /* set the callbacks */
   if (!NILP (server_cb))
     {
-      ne_set_server_auth (s->neon->session,
+      ne_set_server_auth (NEON_DATA (s)->session,
 			  &neon_credentials_cb,
 			  (void *) server_cb);
       Faset (s->state, make_int (SERVER_CB), server_cb);
     }
   if (!NILP (proxy_cb))
     {
-      ne_set_proxy_auth (s->neon->session,
+      ne_set_proxy_auth (NEON_DATA (s)->session,
 			 &neon_credentials_cb,
 			 (void *) proxy_cb);
       Faset (s->state, make_int (PROXY_CB), proxy_cb);
@@ -651,13 +667,13 @@ Returns nil.
 {
   Lisp_Session_Handle *s;
 
-  CHECK_SESSION_HANDLE (session);
+  /* CHECK_SESSION_HANDLE (session); */
   s = XSESSION_HANDLE (session);
   if (!EQ (s->transport, Qneon))
     wtaerror ("not a neon session", session);
-  if (!s->neon || !s->neon->session)
+  if (!NEON_DATA (s) || !NEON_DATA (s)->session)
     invalid_state ("session not open", session);
-  ne_forget_auth (s->neon->session);
+  ne_forget_auth (NEON_DATA (s)->session);
   return Qnil;
 }
 
@@ -763,7 +779,7 @@ test that neon worked at all.
       (session, path, file, codesys))
 {
   int status;
-  ne_session *ns = XSESSION_HANDLE (session)->neon->session;
+  ne_session *ns = NEON_DATA (XSESSION_HANDLE (session))->session;
   Extbyte *p = neon_prepare_path (path, codesys);
   int fd = qxe_interruptible_open (XSTRING_DATA (file),
 				   O_WRONLY | OPEN_BINARY | O_CREAT | O_TRUNC,
@@ -793,7 +809,7 @@ neon-get-file was coded.
       (session, path, file, codesys))
 {
   int status;
-  ne_session *ns = XSESSION_HANDLE (session)->neon->session;
+  ne_session *ns = NEON_DATA (XSESSION_HANDLE (session))->session;
   Extbyte *p = neon_prepare_path (path, codesys);
   int fd = qxe_interruptible_open (XSTRING_DATA (file),
 				   O_RDONLY | OPEN_BINARY,
@@ -825,7 +841,7 @@ neon-get-file was coded.
        (session, path, string, file, codesys))
 {
   int status;
-  ne_session *ns = XSESSION_HANDLE (session)->neon->session;
+  ne_session *ns = NEON_DATA (XSESSION_HANDLE (session))->session;
   Extbyte *b = NEW_LISP_STRING_TO_EXTERNAL (string, Qbinary);
   Extbyte *p = neon_prepare_path (path, codesys);
   int fd = qxe_interruptible_open (XSTRING_DATA (file),
@@ -849,7 +865,7 @@ internally.  CODESYS defaults to `utf-8'.
 */
       (session, path, codesys))
 {
-  ne_session *ns = XSESSION_HANDLE (session)->neon->session;
+  ne_session *ns = NEON_DATA (XSESSION_HANDLE (session))->session;
   Extbyte *p = neon_prepare_path (path, codesys);
   int status = ne_delete (ns, p);
   return neon_status (status);
@@ -862,7 +878,7 @@ internally.  CODESYS defaults to `utf-8'.
 */
       (session, path, codesys))
 {
-  ne_session *ns = XSESSION_HANDLE (session)->neon->session;
+  ne_session *ns = NEON_DATA (XSESSION_HANDLE (session))->session;
   Extbyte *p = neon_prepare_path (path, codesys);
   int status = ne_mkcol (ns, p);
   return neon_status (status);
@@ -879,7 +895,7 @@ then URL-encoded internally.  CODESYS defaults to `utf-8'.
 */
        (session, source, target, depth, overwrite, codesys))
 {
-  ne_session *ns = XSESSION_HANDLE (session)->neon->session;
+  ne_session *ns = NEON_DATA (XSESSION_HANDLE (session))->session;
   Extbyte *s = neon_prepare_path (source, codesys);
   Extbyte *t = neon_prepare_path (target, codesys);
   int d = neon_prepare_depth (depth);
@@ -897,7 +913,7 @@ then URL-encoded internally.  CODESYS defaults to `utf-8'.
 */
       (session, source, target, overwrite, codesys))
 {
-  ne_session *ns = XSESSION_HANDLE (session)->neon->session;
+  ne_session *ns = NEON_DATA (XSESSION_HANDLE (session))->session;
   Extbyte *s = neon_prepare_path (source, codesys);
   Extbyte *t = neon_prepare_path (target, codesys);
   int status = ne_move (ns, (NILP (overwrite) ? 0 : 1), s, t);
@@ -1049,7 +1065,7 @@ response status and headers are cleared.  Returns SESSION.
 
   CHECK_STRING (method);
   CHECK_STRING (path);
-  CHECK_SESSION_HANDLE (session);
+  /* CHECK_SESSION_HANDLE (session); */
   s = XSESSION_HANDLE (session);
 
 #ifdef LAZY_INITIALIZATION_IN_REQUEST
@@ -1066,8 +1082,8 @@ response status and headers are cleared.  Returns SESSION.
       if (!u.port && !(u.port = ne_uri_defaultport (u.scheme)))
 	signal_error (Qio_error, "could not determine port for URL", url);
 
-      s->neon = allocate_neon_data ();
-      s->neon->session = ne_session_create (u.scheme, u.host, u.port);
+      NEON_DATA (s) = allocate_neon_data ();
+      NEON_DATA (s)->session = ne_session_create (u.scheme, u.host, u.port);
       ne_uri_free (&u);
       s->state = Fmake_vector (make_int (NEON_STATE_SIZE), Qnil);
       s->transport = Qneon;
@@ -1076,7 +1092,7 @@ response status and headers are cleared.  Returns SESSION.
 
   if (s->transport != Qneon)
     wtaerror ("not a neon session", session);
-  if (s->neon == NULL || s->neon->session == NULL)
+  if (NEON_DATA (s) == NULL || NEON_DATA (s)->session == NULL)
     invalid_state ("neon session not initialized", session);
   if (NILP (codesys))
     codesys = Fget_coding_system (Qutf_8);
@@ -1088,14 +1104,14 @@ response status and headers are cleared.  Returns SESSION.
     Extbyte *p = NEW_LISP_STRING_TO_EXTERNAL (path, codesys);
 
     /* we can't be sure a neon-request-dispatch was done */
-    if (s->neon->request)
-      ne_request_destroy (s->neon->request);
-    s->neon->request = ne_request_create (s->neon->session, m, p);
+    if (NEON_DATA (s)->request)
+      ne_request_destroy (NEON_DATA (s)->request);
+    NEON_DATA (s)->request = ne_request_create (NEON_DATA (s)->session, m, p);
     /* clear results of last request */
     s->last_response_headers = Qnil;
     s->last_response_status = Qnil;
 #ifdef HAVE_NEON_0_24_7
-    ne_add_response_header_catcher (s->neon->request,
+    ne_add_response_header_catcher (NEON_DATA (s)->request,
 				    &neon->header_catcher,
 				    &(s->last_response_headers));
 #endif
@@ -1148,11 +1164,11 @@ be hideous if it were UTF-8!)  (Verified for libneon 0.24.7.)
   Lisp_Session_Handle *r;
   ne_accept_response accept_filter;
 
-  CHECK_SESSION_HANDLE (request);
+  /* CHECK_SESSION_HANDLE (request); */
   r = XSESSION_HANDLE (request);
   if (!EQ (r->transport, Qneon))
     wtaerror ("URL handle is not a neon handle", request);
-  if (!r->neon || !r->neon->request)
+  if (!NEON_DATA (r) || !NEON_DATA (r)->request)
     invalid_state ("URL handle neon request is uninitialized", request);
   if (EQ (accepter, Qaccept_always) || NILP (accepter))
     accept_filter = &ne_accept_always;
@@ -1161,7 +1177,7 @@ be hideous if it were UTF-8!)  (Verified for libneon 0.24.7.)
   else
     wtaerror ("ACCEPTER must be `accept-always' or `accept-2xx'", accepter);
 
-  neon = r->neon->request;
+  neon = NEON_DATA (r)->request;
   codesys = Fget_coding_system (NILP (codesys) ? Qutf_8 : codesys);
   Faset (r->state, make_int (READER), reader);
 
@@ -1202,12 +1218,12 @@ be hideous if it were UTF-8!)  (Verified for libneon 0.24.7.)
       Faset (r->state, make_int (CURRENT), header);
 
       /* #### unfortunately we can't set RESPONSE here */
-      r->neon->parser = ne_xml_create();
-      ne_xml_push_handler(r->neon->parser,
+      NEON_DATA (r)->parser = ne_xml_create();
+      ne_xml_push_handler(NEON_DATA (r)->parser,
 			  &neon_start_cb, &neon_cdata_cb, &neon_end_cb,
 			  (void *) r->state);
       ne_add_response_body_reader (neon, accept_filter,
-				   &ne_xml_parse_v, (void *) r->neon->parser);
+				   &ne_xml_parse_v, (void *) NEON_DATA (r)->parser);
     }
   else
     {
@@ -1230,13 +1246,13 @@ Yes, of course BODY should be allowed to be a buffer.  Send money!
   Lisp_Session_Handle *r;
 
   CHECK_STRING (body);
-  CHECK_SESSION_HANDLE (request);
+  /* CHECK_SESSION_HANDLE (request); */
   r = XSESSION_HANDLE (request);
   if (!EQ (r->transport, Qneon))
     wtaerror ("not a neon session", request);
-  if (!r->neon || !r->neon->request)
+  if (!NEON_DATA (r) || !NEON_DATA (r)->request)
     invalid_state ("neon request is uninitialized", request);
-  neon = r->neon->request;
+  neon = NEON_DATA (r)->request;
 
   {
     /* #### Use eistrings here? */
@@ -1256,7 +1272,7 @@ Returns nil.
 */
        (request, name, value))
 {
-  CHECK_SESSION_HANDLE (request);
+  /* CHECK_SESSION_HANDLE (request); */
   CHECK_STRING (name);
   CHECK_STRING (value);
 
@@ -1264,10 +1280,10 @@ Returns nil.
     {
       ne_request *r;
 
-      if (XSESSION_HANDLE (request)->neon == NULL)
+      if (NEON_DATA (XSESSION_HANDLE (request)) == NULL)
 	invalid_state ("neon request not live", request);
 
-      r = XSESSION_HANDLE (request)->neon->request;
+      r = NEON_DATA (XSESSION_HANDLE (request))->request;
       if (r)
 	{
 	  Extbyte *n =  NEW_LISP_STRING_TO_EXTERNAL (name, Qbinary);
@@ -1305,15 +1321,15 @@ phrase \(five elements) in that order.
 {
   Lisp_Session_Handle *r;
 
-  CHECK_SESSION_HANDLE (request);
+  /* CHECK_SESSION_HANDLE (request); */
   r = XSESSION_HANDLE (request);
   if (!EQ (r->transport, Qneon))
     wtaerror ("URL handle is not a neon handle", request);
-  if (!r->neon || !r->neon->request)
+  if (!NEON_DATA (r) || !NEON_DATA (r)->request)
     invalid_state ("URL handle neon request is uninitialized", request);
 
   {
-    ne_request *neon = r->neon->request;
+    ne_request *neon = NEON_DATA (r)->request;
     int code;
 
     code = ne_request_dispatch (neon);
@@ -1331,10 +1347,10 @@ phrase \(five elements) in that order.
 #endif
 
     /* #### I think we can destroy the request right here and right now. */
-    if (r->neon->request)
+    if (NEON_DATA (r)->request)
       {
-	ne_request_destroy (r->neon->request);
-	r->neon->request = NULL;
+	ne_request_destroy (NEON_DATA (r)->request);
+	NEON_DATA (r)->request = NULL;
       }
     else
       invalid_state ("WTF? No neon request!", request);
@@ -1350,10 +1366,10 @@ phrase \(five elements) in that order.
     else if (EQ (Faref (r->state, make_int (READER)), Qwebdav_xml))
       {
 	/* the reader used up a parser, we can destroy it now */
-	if (r->neon->parser)
+	if (NEON_DATA (r)->parser)
 	  {
-	    ne_xml_destroy (r->neon->parser);
-	    r->neon->parser = NULL;
+	    ne_xml_destroy (NEON_DATA (r)->parser);
+	    NEON_DATA (r)->parser = NULL;
 	  }
 	else
 	  invalid_state ("WTF? No neon parser!", request);
@@ -1371,7 +1387,7 @@ phrase \(five elements) in that order.
       case NE_TIMEOUT:
 	signal_error (Qio_error, "Connection timed out", request);
       case NE_ERROR:
-	signal_error (Qio_error, ne_get_error (r->neon->session), request);
+	signal_error (Qio_error, ne_get_error (NEON_DATA (r)->session), request);
       default:
 	invalid_state ("undocumented error in neon_request_dispatch", request);
       }
@@ -1746,7 +1762,9 @@ syms_of_neon_api ()
 #endif
 
   /* neon-specific functions. */
+#ifndef LAZY_INITIALIZATION_IN_REQUEST
   DEFSUBR (Fneon_make_session_handle);
+#endif
   DEFSUBR (Fneon_session_set_auth);
   DEFSUBR (Fneon_session_forget_auth);
   DEFSUBR (Fneon_get_file);
