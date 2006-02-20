@@ -148,12 +148,38 @@ extract_fcapi_string (Lisp_Object str)
    assurance that the string won't move in memory.  So we hash them
    ourselves; hash.c hashtables do not interpret the value pointers. */
 static FcChar8 *fc_standard_properties[] = {
-  "antialias", "aspect", "autohint", "charset", "dpi", "family", "file",
-  "foundry", "ftface", "globaladvance", "hinting", "index", "lang",
-  "minspace", "outline", "pixelsize", "rasterizer", "rgba", "scalable",
-  "scale", "size", "slant", "spacing", "style", "verticallayout", "weight",
+  (FcChar8 *) "antialias",	/* Boy, GCC is stupid. */
+  (FcChar8 *) "aspect",
+  (FcChar8 *) "autohint",
+  (FcChar8 *) "charset",
+  (FcChar8 *) "dpi",
+  (FcChar8 *) "family",
+  (FcChar8 *) "file",
+  (FcChar8 *) "foundry",
+  (FcChar8 *) "ftface",
+  (FcChar8 *) "globaladvance",
+  (FcChar8 *) "hinting",
+  (FcChar8 *) "index",
+  (FcChar8 *) "lang",
+  (FcChar8 *) "minspace",
+  (FcChar8 *) "outline",
+  (FcChar8 *) "pixelsize",
+  (FcChar8 *) "rasterizer",
+  (FcChar8 *) "rgba",
+  (FcChar8 *) "scalable",
+  (FcChar8 *) "scale",
+  (FcChar8 *) "size",
+  (FcChar8 *) "slant",
+  (FcChar8 *) "spacing",
+  (FcChar8 *) "style",
+  (FcChar8 *) "verticallayout",
+  (FcChar8 *) "weight",
   /* obsolete after Xft v. 1 */
-  "charwidth", "charheight", "core", "encoding", "render"
+  (FcChar8 *) "charwidth",
+  (FcChar8 *) "charheight",
+  (FcChar8 *) "core",
+  (FcChar8 *) "encoding",
+  (FcChar8 *) "render"
 };
 
 static struct hash_table *fc_property_name_hash_table;
