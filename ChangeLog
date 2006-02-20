@@ -1,6 +1,7 @@
 2006-02-20  Stephen J. Turnbull  <stephen@xemacs.org>
 
-	* .gitignore: Add CVS, reorder.
+	* .gitignore: Add CVS, .gdb_init, and
+	modules/neon/neon-test-user.el; reorder.
 
 2005-11-08  Malcolm Purvis  <malcolmp@xemacs.org>
 
