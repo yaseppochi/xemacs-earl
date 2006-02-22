@@ -1,3 +1,14 @@
+2006-02-22  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* svg/svg.c:
+	New file, copied from xsvg-0.2.1 distribution.
+
+	* svg/Makefile.in.in:
+	* svg/configure.ac:
+	* svg/install-sh:
+	* svg/.cvsignore:
+	New files, copied from canna module and modified to suit SVG.
+
 2007-07-31  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* neon/neon.el: Moved to ../lisp/.
