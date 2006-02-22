@@ -1,37 +1,33 @@
-/* xsvg - SVG viewer application for the X Window System
+/* svg.c --- an XEmacs module to implement Scalable Vector Graphics glyphs
  *
+ * Copyright (C) 2006 The Free Software Foundation, Inc.
  * Copyright © 2002 USC/Information Sciences Institute
  *
- * Permission to use, copy, modify, distribute, and sell this software
- * and its documentation for any purpose is hereby granted without
- * fee, provided that the above copyright notice appear in all copies
- * and that both that copyright notice and this permission notice
- * appear in supporting documentation, and that the name of
- * Information Sciences Institute not be used in advertising or
- * publicity pertaining to distribution of the software without
- * specific, written prior permission.  Information Sciences Institute
- * makes no representations about the suitability of this software for
- * any purpose.  It is provided "as is" without express or implied
- * warranty.
+ * This file is part of XEmacs.  You may copy and redistribute it verbatim
+ * or in modified form under the conditions of the GNU General Public
+ * License, version 2.  If you received this file as part of a full XEmacs
+ * distribution, you may, at your option, copy and redistribute it under
+ * any of the licenses which XEmacs permits.
  *
- * INFORMATION SCIENCES INSTITUTE DISCLAIMS ALL WARRANTIES WITH REGARD
- * TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL INFORMATION SCIENCES
- * INSTITUTE BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA
- * OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- *
- * Author: Carl Worth <cworth@isi.edu>
+ * Portions of this file were copied from xsvg.c in the xsvg-0.2.1
+ * distribution.  See README.license.xsvg for the xsvg license terms.
  */
+
+#include <config.h>
+#include "lisp.h"
+/* #include "opaque.h" */
+/* #include "sysdep.h" */
+/* #include "buffer.h" */
+/* #include "process.h"		/* for report_process_error */
+#ifdef HAVE_SHLIB
+# include "emodules.h"
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
-#include <png.h>
 
 #include <cairo.h>
 #include <cairo-xlib.h>
@@ -39,7 +35,6 @@
 
 #include <svg-cairo.h>
 
-#include "args.h"
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 

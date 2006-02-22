@@ -1,6 +1,16 @@
 2006-02-22  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* svg/svg.c:
+	Remove useless includes of png.h and args.h.
+	Add includes of config.h, lisp.h, and emodules.h, plus some
+	boilerplate includes.
+
+	* svg/README.license.xsvg: New file, containing ISI license.
+	* svg/svg.c:  Move ISI license to README.license.xsvg.
+
+2006-02-22  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* svg/svg.c:
 	New file, copied from xsvg-0.2.1 distribution.
 
 	* svg/Makefile.in.in:
