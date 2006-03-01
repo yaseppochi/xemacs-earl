@@ -13,6 +13,21 @@
  * distribution.  See README.license.xsvg for the xsvg license terms.
  */
 
+/* Implementation strategy
+
+   For a first cut we'll take a somewhat cheesy but interesting approach:
+   implement the SVG glyph as an (active) widget rather than an image
+   glyph.
+     - The callbacks then stay, and would all be Lisp functions.
+     - The key bindings go away (since XEmacs will handle those events).
+     - The cursor code will need to call out to XEmacs.
+
+   It's not obvious how easy it will be to convert to a "normal" image glyph
+   (ie, one which is an eimage pixel buffer object).
+
+   I wonder if it would make sense to convert eimages to cairos?
+*/
+
 #include <config.h>
 #include "lisp.h"
 /* #include "opaque.h" */
