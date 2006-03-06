@@ -35,15 +35,18 @@ Boston, MA 02111-1307, USA.  */
 #ifndef _included_xlwsvg_h
 #define _included_xlwsvg_h
 
-/***********************************************************************
- *
- * Gauge Widget
- *
- * The Gauge widget looks something like a thermometer.  Application
- * defines the values at the ends of the range and the current value
- * and Gauge draws accordingly.  Gauge does not accept input.
- *
- ***********************************************************************/
+/* For commenting out stuff I don't understand, or don't yet see a need
+   for.  Eventually these should all be removed. */
+#define YAGNI "You aren't gonna need it!"
+
+/***********************************************************************\
+*									*
+* SVG Canvas Widget							*
+*									*
+* The SVG Canvas widget provides a window for rendering Scalable	*
+* Vector Graphics.							*
+*									*
+************************************************************************/
 
 #include ATHENA_Label_h_
 
@@ -51,16 +54,9 @@ Boston, MA 02111-1307, USA.  */
 
  Name			Class		RepType		Default Value
  ----			-----		-------		-------------
- value			Value		Cardinal	0
- minValue		MinValue	Cardinal	0
- maxValue		MaxValue	Cardinal	100
- ntics			NTics		Cardinal	0	+
- nlabels		NLabels		Cardinal	0	++
- labels			Labels		String *	NULL	+++
  orientation		Orientation	XtOrientation	horizontal
  autoScaleUp		AutoScaleUp	Boolean		FALSE	++++
  autoScaleDown		AutoScaleDown	Boolean		FALSE	++++
- getValue		Callback	XtCallbackList	NULL	+++++
  update			Interval	int		0 (seconds) = disabled
 
  encoding		Encoding	unsigned char	XawTextEncoding8bit
@@ -86,26 +82,8 @@ Boston, MA 02111-1307, USA.  */
  x			Position	Position	0
  y			Position	Position	0
 
- +   Ntics sets the number of tic marks next to the gauge.  If 0, no
-     tic marks will be drawn.
- ++  Nlabels sets the number of labels next to the gauge.
- +++ Labels is an array of nul-terminated strings to be used as labels.
-     If this field is NULL but nlabels is > 0, then numeric labels will be
-     provided.  NOTE: the labels are not copied to any internal memory; they
-     must be stored in static memory provided by the application.
  ++++ AutoScale allows the gauge to set its own value limits.  Default is
       False unless upper & lower limits are both 0.
-
- +++++ The GetValue() callback proc is called with these arguments:
- 	static void
-	myGetValue(gauge, client, rval)
-		Widget	gauge ;
-		XtPointer client ;
-		XtPointer rval ;
-	{
-	  *(Cardinal *)rval = value ;
-	}
-
 */
 
 /*
@@ -117,37 +95,11 @@ Boston, MA 02111-1307, USA.  */
 #define XtCSVGSource	"SVGSource"
 #endif
 
-#if 0
-
-#ifndef	XtNvalue
-#define	XtNvalue	"value"
-#define	XtCValue	"Value"
-#endif
+#ifndef YAGNI
 
 #ifndef	XtNorientation
 #define	XtNorientation	"orientation"
 #define	XtCOrientation	"Orientation"
-#endif
-
-#define	XtNntics	"ntics"
-#define	XtCNTics	"NTics"
-
-#ifndef	XtNnlabels
-#define	XtNnlabels	"nlabels"
-#define	XtCNLabels	"NLabels"
-#endif
-#ifndef	XtNlabels
-#define	XtNlabels	"labels"
-#define	XtCLabels	"Labels"
-#endif
-
-#ifndef	XtNminValue
-#define	XtNminValue	"minValue"
-#define	XtCMinValue	"MinValue"
-#endif
-#ifndef	XtNmaxValue
-#define	XtNmaxValue	"maxValue"
-#define	XtCMaxValue	"MaxValue"
 #endif
 
 #ifndef	XtNautoScaleUp
@@ -161,10 +113,6 @@ Boston, MA 02111-1307, USA.  */
 #define	XtNupdate	"update"
 #endif
 
-#ifndef	XtNgetValue
-#define	XtNgetValue	"getValue"
-#endif
-
 #endif
 
 /* Class record constants */
@@ -174,22 +122,10 @@ extern WidgetClass svgCanvasWidgetClass;
 typedef struct _SVGCanvasClassRec *SVGCanvasWidgetClass;
 typedef struct _SVGCanvasRec      *SVGCanvasWidget;
 
-
+#ifndef YAGNI
 _XFUNCPROTOBEGIN
 
-extern	void	XawSVGCanvasSetValue(
-#if NeedFunctionPrototypes
-	Widget	svgCanvas,
-	Cardinal value
-#endif
-);
-
-extern	Cardinal XawSVGCanvasGetValue(
-#if NeedFunctionPrototypes
-	Widget	svgCanvas
-#endif
-);
-
 _XFUNCPROTOEND
+#endif
 
 #endif /* _included_xlwsvg_h */

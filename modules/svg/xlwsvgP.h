@@ -50,17 +50,18 @@ Boston, MA 02111-1307, USA.  */
 
 /* New fields for the SVGCanvas widget class record */
 
-typedef struct {XtPointer extension;} SVGCanvasClassPart;
+typedef struct { XtPointer extension; } SVGCanvasClassPart;
 
 /* Full class record declaration */
 typedef struct _SVGCanvasClassRec {
-    CoreClassPart	core_class;
-    SimpleClassPart	simple_class;
+  CoreClassPart		core_class;
+  SimpleClassPart	simple_class;
 #ifdef	_ThreeDP_h
-    ThreeDClassPart     threeD_class;
+  /* do we ever need 3D? */
+  ThreeDClassPart	threeD_class;
 #endif
-    LabelClassPart	label_class;
-    SVGCanvasClassPart	svg_canvas_class;
+  LabelClassPart	label_class;
+  SVGCanvasClassPart	svg_canvas_class;
 } SVGCanvasClassRec;
 
 extern SVGCanvasClassRec svgCanvasClassRec;
@@ -75,20 +76,57 @@ typedef struct {
   Boolean	autoScaleUp;	/* scales automatically */
   Boolean	autoScaleDown;	/* scales automatically */
   int		update;		/* update interval */
-  XtCallbackList getValue;	/* proc to call to fetch a point */
 #endif
 
   /* private state */
-#if 0
-  Dimension	gmargin;	/* edges <-> svgCanvas */
-  Dimension	tmargin;	/* top (left) edge <-> tic marks */
-  Dimension	lmargin;	/* tic marks <-> labels */
-  Dimension	margin0;	/* left/bottom margin */
-  Dimension	margin1;	/* right/top margin */
-  XtIntervalId	intervalId;
-  Atom		selected;
-  String	selstr;		/* selection string, if any */
-  GC		inverse_GC;
+#ifdef NEED_TO_CACHE_WINDOW_INFO
+  Display	*dpy;
+  int		scr;
+  Window	win;
+  unsigned long	event_mask;
+  GC		gc;
+  Visual	*visual;
+  Colormap	cmap;
+  int		depth;
+#endif
+
+#if CURSOR_CODE_IS_FIXED
+  Cursor	arrow;
+  Cursor	watch;
+#endif
+
+  /* SVG/Cairo-specific components */
+  cairo_t	*cr;
+  svg_cairo_t	*svgc;
+
+  /* display modes - resources? */
+  int		x_flip, y_flip;
+  int		fit_mode;
+  int		full_mode;
+
+  /* graphic geometry - resources? */
+  unsigned int	width, height;
+  double	tx;		/* window origin in graphic space */
+  double	ty;
+  double	zoom;		/* scale factor */
+  double	tolerance;	/* "smoothness" */
+
+  /* buffer for fast redisplay */
+  Pixmap	pix;
+
+  /* redisplay "dirty" flag */
+  int		needs_refresh;
+
+  /* X server vocabulary */
+  Atom		wm_delete_window_atom;
+
+#ifdef XEMACS_CANT_READ_FILES
+  char		**svg_files;
+  int		svg_nfile;
+  int		svg_curfile;
+#else
+  XtPointer	buffer;		/* ?? Lisp_Object which is bufferp
+				   maybe this should be an lstream? */
 #endif
 } SVGCanvasPart;
 
@@ -100,13 +138,14 @@ typedef struct {
  ****************************************************************/
 
 typedef struct _SVGCanvasRec {
-    CorePart		core;
-    SimplePart		simple;
+  CorePart	core;
+  SimplePart	simple;
 #ifdef	_ThreeDP_h
-    ThreeDPart  	threeD;
+  /* do we ever need 3D? */
+  ThreeDPart  	threeD;
 #endif
-    LabelPart		label;
-    SVGCanvasPart	svgCanvas;
+  LabelPart	label;
+  SVGCanvasPart	svgCanvas;
 } SVGCanvasRec;
 
 #endif /* _included_xlwsvgP_h */
