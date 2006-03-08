@@ -70,42 +70,22 @@ extern SVGCanvasClassRec svgCanvasClassRec;
 typedef struct {
   /* resources */
   String	*svgSource;
-  String	*labels;
-#if 0
-  XtOrientation orientation;
-  Boolean	autoScaleUp;	/* scales automatically */
-  Boolean	autoScaleDown;	/* scales automatically */
-  int		update;		/* update interval */
-#endif
 
   /* private state */
-#ifdef NEED_TO_CACHE_WINDOW_INFO
-  Display	*dpy;
-  int		scr;
-  Window	win;
-  unsigned long	event_mask;
   GC		gc;
-  Visual	*visual;
-  Colormap	cmap;
-  int		depth;
-#endif
-
-#if CURSOR_CODE_IS_FIXED
-  Cursor	arrow;
-  Cursor	watch;
-#endif
 
   /* SVG/Cairo-specific components */
-  cairo_t	*cr;
-  svg_cairo_t	*svgc;
+  cairo_t	*cairo;
+  svg_cairo_t	*svg_cairo;
 
-  /* display modes - resources? */
+  /* display modes - resources?
+     #### these should probably go away in favor of something more flexible */
   int		x_flip, y_flip;
   int		fit_mode;
   int		full_mode;
 
-  /* graphic geometry - resources? */
-  unsigned int	width, height;
+  /* graphic geometry - resources?
+     #### these should probably go away in favor of something more flexible */
   double	tx;		/* window origin in graphic space */
   double	ty;
   double	zoom;		/* scale factor */
@@ -117,14 +97,6 @@ typedef struct {
   /* redisplay "dirty" flag */
   int		needs_refresh;
 
-  /* X server vocabulary */
-  Atom		wm_delete_window_atom;
-
-#ifdef XEMACS_CANT_READ_FILES
-  char		**svg_files;
-  int		svg_nfile;
-  int		svg_curfile;
-#else
   XtPointer	buffer;		/* ?? Lisp_Object which is bufferp
 				   maybe this should be an lstream? */
 #endif

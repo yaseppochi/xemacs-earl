@@ -54,10 +54,7 @@ Boston, MA 02111-1307, USA.  */
 
  Name			Class		RepType		Default Value
  ----			-----		-------		-------------
- orientation		Orientation	XtOrientation	horizontal
- autoScaleUp		AutoScaleUp	Boolean		FALSE	++++
- autoScaleDown		AutoScaleDown	Boolean		FALSE	++++
- update			Interval	int		0 (seconds) = disabled
+ svgSource		SVGSource	String		None
 
  encoding		Encoding	unsigned char	XawTextEncoding8bit
  font			Font		XFontStruct*	XtDefaultFont
@@ -81,9 +78,6 @@ Boston, MA 02111-1307, USA.  */
  width			Width		Dimension	text width
  x			Position	Position	0
  y			Position	Position	0
-
- ++++ AutoScale allows the gauge to set its own value limits.  Default is
-      False unless upper & lower limits are both 0.
 */
 
 /*
@@ -93,26 +87,6 @@ Boston, MA 02111-1307, USA.  */
 #ifndef XtNsvgSource
 #define XtNsvgSource	"svgSource"
 #define XtCSVGSource	"SVGSource"
-#endif
-
-#ifndef YAGNI
-
-#ifndef	XtNorientation
-#define	XtNorientation	"orientation"
-#define	XtCOrientation	"Orientation"
-#endif
-
-#ifndef	XtNautoScaleUp
-#define	XtNautoScaleUp		"autoScaleUp"
-#define	XtCAutoScaleUp		"AutoScaleUp"
-#define	XtNautoScaleDown	"autoScaleDown"
-#define	XtCAutoScaleDown	"AutoScaleDown"
-#endif
-
-#ifndef	XtNupdate
-#define	XtNupdate	"update"
-#endif
-
 #endif
 
 /* Class record constants */

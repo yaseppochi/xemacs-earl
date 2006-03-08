@@ -23,54 +23,62 @@ Boston, MA 02111-1307, USA.
 Portions of this file were copied from xsvg.c in the xsvg-0.2.1
 distribution.  See README.license.xsvg for the xsvg license terms. */
 
-/**************************************************************************\
-*		  SVG Canvas for the Lucid Widget Library		   *
-*									   *
-* This widget implements a canvas for rendering Scalable Vector Graphics   *
-* (SVG) objects via libsvg-cairo, which as its name suggests is a thin	   *
-* wrapper around libsvg and cairo.  libsvg in turn depends on libxml2 (or  *
-* possibly expat).  #### check other dependencies.			   *
-*   The plan is to adapt the general organization and possibly some code   *
-* from Ed Falk's "Gauge" widget as adapted by Andy Piper to lwlib.	   *
-*   The reasons for picking this widget rather than one of the Athena or   *
-* Xt widgets are (1) it is dynamic, and it would be nice if the SVG canvas *
-* could be dynamic (for WYSYWIG editing as well as for the animation that  *
-* the SVG standard specifies) and (2) the Gauge widget is problematic in   *
-* XEmacs, regularly causing crashes and other problems -- maybe I'll learn *
-* enough to clean it up!						   *
-*   -- stephen, 2006-03-01						   *
-*									   *
-* Edward Falk wrote:							   *
-*   Note: for fun and demonstration purposes, I have added selection	   *
-* capabilities to this widget.  If you select the widget, you create a	   *
-* primary selection containing the current value of the widget in both	   *
-* integer and string form.  If you copy into the widget, the primary	   *
-* selection is converted to an integer value and the gauge is set to that  *
-* value.								   *
-* stephen adds:								   *
-*   I wonder if similar capabilities (selections capable of sending source *
-* and/or pixmaps) would be worth building in.				   *
-*									   *
-* Implementation strategy						   *
-*									   *
-* For a first cut we'll take a somewhat cheesy but interesting approach:   *
-* implement the SVG glyph as an (active) widget rather than an image	   *
-* glyph.								   *
-*   - The callbacks then stay, and would all be Lisp functions.		   *
-*   - The key bindings go away (since XEmacs will handle those events).	   *
-*   - The cursor code will need to call out to XEmacs.			   *
-*									   *
-* It's not obvious how easy it will be to convert to a "normal" image	   *
-* glyph (ie, one which is an eimage pixel buffer object).		   *
-*									   *
-*  I wonder if it would make sense to convert eimages to cairos?	   *
-*									   *
-*   A dynamic model would involve double-buffering.  Since inputting the   *
-* SVG and exposure events from the display are asynchronous, the work	   *
-* buffer and the backing store (the source of the copy in SVGCanvasExpose) *
-* need to be different.  (If the display supports backing store, this	   *
-* could be optimized.)							   *
-\**************************************************************************/
+/***************************************************************************\
+*		  SVG Canvas for the Lucid Widget Library		    *
+*									    *
+* This widget implements a canvas for rendering Scalable Vector Graphics    *
+* (SVG) objects via libsvg-cairo, which as its name suggests is a thin	    *
+* wrapper around libsvg and cairo.  libsvg in turn depends on libxml2 (or   *
+* possibly expat).  #### check other dependencies.			    *
+*   The plan is to adapt the general organization and possibly some code    *
+* from Ed Falk's "Gauge" widget as adapted by Andy Piper to lwlib.	    *
+*   The reasons for picking this widget rather than one of the Athena or    *
+* Xt widgets are (1) it is dynamic, and it would be nice if the SVG canvas  *
+* could be dynamic (for WYSYWIG editing as well as for the animation that   *
+* the SVG standard specifies) and (2) the Gauge widget is problematic in    *
+* XEmacs, regularly causing crashes and other problems -- maybe I'll learn  *
+* enough to clean it up!						    *
+*   -- stephen, 2006-03-01						    *
+*									    *
+* Edward Falk wrote:							    *
+*   Note: for fun and demonstration purposes, I have added selection	    *
+* capabilities to this widget.  If you select the widget, you create a	    *
+* primary selection containing the current value of the widget in both	    *
+* integer and string form.  If you copy into the widget, the primary	    *
+* selection is converted to an integer value and the gauge is set to that   *
+* value.								    *
+* stephen adds:								    *
+*   I wonder if similar capabilities (selections capable of sending source  *
+* and/or pixmaps) would be worth building in.				    *
+*									    *
+* Implementation strategy						    *
+*									    *
+* For a first cut we'll take a somewhat cheesy but interesting approach:    *
+* implement the SVG glyph as an (active) widget rather than an image	    *
+* glyph.								    *
+*   - The callbacks then stay, and would all be Lisp functions.		    *
+*   - The key bindings go away (since XEmacs will handle those events).	    *
+*   - The cursor code will need to call out to XEmacs.			    *
+*									    *
+* It's not obvious how easy it will be to convert to a "normal" image	    *
+* glyph (ie, one which is an eimage pixel buffer object).		    *
+*									    *
+*   I wonder if it would make sense to convert eimages to cairos?	    *
+*									    *
+*   A dynamic model would involve double-buffering.  Since inputting the    *
+* SVG and exposure events from the display are asynchronous, the work	    *
+* buffer and the backing store (the source of the copy in SVGCanvasExpose)  *
+* need to be different.  (If the display supports backing store, this	    *
+* could be optimized.)							    *
+*									    *
+*   Although the Gauge widget does make some use of Label and Simple	    *
+* resources, it's not clear this is appropriate for the SVGCanvas.  IMO,    *
+* the whole Athena widget set probably should be refactored into the	    *
+* content handling parts and "surround" gadgetry which would manage borders *
+* and other such presentational scutwork.				    *
+*   OTOH, this can probably be accomplished at the lwlib level, wrapping    *
+* the new abstractions around the widget set implementations.		    *
+\***************************************************************************/
 
 /*
  * xlwsvg.c - SVG canvas widget
@@ -85,6 +93,7 @@ distribution.  See README.license.xsvg for the xsvg license terms. */
  *
  *   1. Fix all ####.
  *   2. Remove all YAGNIs from xlwsvg.c, xlwsvg.h, and xlwsvgP.h.
+ *   3. Remove dependence on Xaw.
  */
 
 #include <config.h>
@@ -106,21 +115,17 @@ distribution.  See README.license.xsvg for the xsvg license terms. */
 #include <X11/Xmu/Drawing.h>
 #include <X11/Xmu/StdSel.h>
 #endif
-#endif /* YAGNI */
 
-/* #include "opaque.h" */	/* more Lisp stuff */
-/* #include "sysdep.h" */
-/* #include "buffer.h" */
-/* #include "process.h"		/* for report_process_error */
+#include "opaque.h"		/* more Lisp stuff from xlwgauge.c */
+#include "sysdep.h"
+#include "buffer.h"
+#include "process.h"		/* for report_process_error */
+#endif /* YAGNI */
 #ifdef HAVE_SHLIB
 # include "emodules.h"
 #endif
 
 #ifndef YAGNI
-#define	DEF_LEN	50	/* default width (or height for vertical gauge) */
-#define	MIN_LEN	10	/* minimum reasonable width (height) */
-#define	TIC_LEN	6	/* length of tic marks */
-#define	GA_WID	3	/* width of gauge */
 #define	MS_PER_SEC 1000
 #endif
 
@@ -130,28 +135,14 @@ distribution.  See README.license.xsvg for the xsvg license terms. */
  *
  ****************************************************************/
 
-#ifndef YAGNI
-static	char	defaultTranslations[] =
-	"<Btn1Up>:	select()\n\
-	 <Key>F1:	select(CLIPBOARD)\n\
-	 <Btn2Up>:	paste()\n\
-	 <Key>F2:	paste(CLIPBOARD)";
-#endif /* YAGNI */
-
 #define offset(field) XtOffsetOf (SVGCanvasRec, svgCanvas.field)
 static XtResource resources[] = {
   { XtNsvgSource, XtCSVGSource, XtRString, sizeof(String*),
     offset (svgSource), XtRString, (XtPointer) 0 },
-#ifndef YAGNI
-  { XtNautoScaleUp, XtCAutoScaleUp, XtRBoolean, sizeof(Boolean),
-    offset (autoScaleUp), XtRImmediate, FALSE },
-  { XtNautoScaleDown, XtCAutoScaleDown, XtRBoolean, sizeof(Boolean),
-    offset (autoScaleDown), XtRImmediate, FALSE },
-  { XtNorientation, XtCOrientation, XtROrientation, sizeof(XtOrientation),
-    offset (orientation), XtRImmediate, (XtPointer) XtorientHorizontal },
-  { XtNupdate, XtCInterval, XtRInt, sizeof(int),
-    offset (update), XtRImmediate, (XtPointer) 0 },
-#endif /* YAGNI */
+
+  /* Orientation, translation, and scaling should probably be all combined
+     into a transformation matrix (surely Cairo and SVG have such types),
+     with convenience routines (perhaps in Lisp) to handle common cases. */
 };
 #undef offset
 
@@ -176,8 +167,7 @@ static void SVGCanvasPaste  (Widget, XEvent*, String*, Cardinal*);
 /* internal privates */
 
 #ifndef YAGNI
-static void SVGCanvasSize (SVGCanvasWidget, Dimension*, Dimension*, Dimension);
-static void AutoScale     (SVGCanvasWidget);
+static void SVGCanvasSize (SVGCanvasWidget, Dimension*, Dimension*);
 static void EnableUpdate  (SVGCanvasWidget);
 static void DisableUpdate (SVGCanvasWidget);
 
@@ -189,16 +179,19 @@ static void SVGCanvasGetSelCB (Widget, XtPointer, Atom*, Atom*,
 			       XtPointer, unsigned long*, int*);
 
 static GC Get_GC (SVGCanvasWidget, Pixel);
-#endif /* YAGNI */
 
 static	XtActionsRec	actionsList[] =
 {
-#ifndef YAGNI
   {"select",	SVGCanvasSelect},
   {"paste",	SVGCanvasPaste},
-#endif /* YAGNI */
 };
 
+static	char	defaultTranslations[] =
+	"<Btn1Up>:	select()\n\
+	 <Key>F1:	select(CLIPBOARD)\n\
+	 <Btn2Up>:	paste()\n\
+	 <Key>F2:	paste(CLIPBOARD)";
+#endif /* YAGNI */
 
 
 /****************************************************************
@@ -219,8 +212,8 @@ SVGCanvasClassRec svgCanvasClassRec = {
     /* initialize	  	*/	SVGCanvasInit,
     /* initialize_hook		*/	NULL,
     /* realize		  	*/	XtInheritRealize,	/* TODO? */
-    /* actions		  	*/	actionsList,
-    /* num_actions	  	*/	XtNumber (actionsList),
+    /* actions		  	*/	NULL,            /* actionsList, */
+    /* num_actions	  	*/	0,    /* XtNumber (actionsList), */
     /* resources	  	*/	resources,
     /* num_resources	  	*/	XtNumber (resources),
     /* xrm_class	  	*/	NULLQUARK,
@@ -238,7 +231,7 @@ SVGCanvasClassRec svgCanvasClassRec = {
     /* accept_focus	 	*/	NULL,
     /* version			*/	XtVersion,
     /* callback_private   	*/	NULL,
-    /* tm_table		   	*/	defaultTranslations,
+    /* tm_table		   	*/	NULL,    /* defaultTranslations, */
     /* query_geometry		*/	SVGCanvasQueryGeometry,
     /* display_accelerator	*/	XtInheritDisplayAccelerator,
     /* extension		*/	NULL
@@ -283,13 +276,7 @@ static void
 SVGCanvasClassInit (void)
 {
     XawInitializeWidgetSet ();
-#ifdef HAVE_XMU
-    XtAddConverter (XtRString, XtROrientation, XmuCvtStringToOrientation,
-		    NULL, 0);
-#endif
 }
-
-
 
 /* ARGSUSED */
 static void
@@ -299,165 +286,56 @@ SVGCanvasInit (Widget   request,
 	       Cardinal *UNUSED (num_args))
 {
   SVGCanvasWidget svgw = (SVGCanvasWidget) new_;
+  int status = 0;
+  /* #### which of these initializations do we need? */
+  svgw->svgCanvas.cairo = NULL;
+  svgw->svgCanvas.svg_cairo = NULL;
 
-  /* The Gauge widget AutoScales itself here. */
+  /* YAGNIs from xsvg.c:
+     Core Widget component initializes display and screen information
+     translation (tx and ty), reflection (x_flip and y_flip), zoom, and
+       smoothness (tolerance) are initialized as resources
+     I don't think we need needs_refresh
+     svg_files, svg_nfile, and svg_curfile would be initialized as
+       resources, if they make sense at all
+  */
 
-  /* If size not explicitly set, set it to our preferred size now.  */
-  if (request->core.width == 0  ||  request->core.height == 0)
+  /* If size not explicitly set, set it to our preferred size now.
+     If neither width nor height is set, query the svg_cairo;
+     else scale the unspecified dimension to the svg_cairo's aspect ratio. */
+  if (request->core.width == 0 || request->core.height == 0)
     {
       Dimension w,h;
-      SVGCanvasSize (svgw, &w,&h, DEF_LEN);
-      if (request->core.width == 0)
+      SVGCanvasSize (svgw, &w, &h);
+      if (request->core.width == 0 && request->core.height == 0)
 	new_->core.width = w;
-      if (request->core.height == 0)
 	new_->core.height = h;
+      else if (request->core.width == 0)
+	new_->core.width = w*request->core.height/h;
+      else if (request->core.height == 0)
+	new_->core.height = h*request->core.width/w;
       svgw->core.widget_class->core_class.resize (new_);
     }
 
-#ifndef YAGNI
-  /* Initialize selection data. */
-  svgw->svgCanvas.selected = None;
-  svgw->svgCanvas.selstr = NULL;
+  /* xvsg does an XFlush here. */
 
-  /* #### What's this? */
-  if (svgw->svgCanvas.update > 0)
-    EnableUpdate (svgw);
-
-  /* The SVGCanvas widget probably doesn't need an inverse GC? */
-  svgw->svgCanvas.inverse_GC = Get_GC (svgw, svgw->core.background_pixel);
-#endif /* YAGNI */
-
-#ifdef NOT_YET_USED_CODE_FROM_xsvg
-static void
-win_init (win_t *win,		/* Corresponds to Widget in Xt */
-	  Display *dpy,		/* Handled by Core Widget component */
-	  int argb,
-	  char *geometry,	/* We're not a top-level widget, ignore. */
-	  char **svg_files,
-	  int svg_nfile)
-{
-    unsigned int i;
-    XGCValues gcv;
-    XSetWindowAttributes attributes;
-    unsigned long attributemask = 0;
-    cairo_surface_t *surface;
-
-    /* Core Widget component initializies display and screen information */
-    /* translation (tx and ty), reflection (x_flip and y_flip), zoom, and
-       smoothness (tolerance) are initialized as resources */
-
-    win->needs_refresh = 1;
-
-    /* svg_files and svg_nfile are initialized as resources */
-
-    win->svg_curfile = 0;
-    
-    win->svgc = 0;
-    win->win = 0;
-    
-    win_load (win);		/* #### create an svg_cairo_t, parse the
-				   current SVG file into it */
-
-    /* #### I think most of this is initialized as Core resources? */
-    if (argb && (win->visual = find_argb_visual (dpy, win->scr)))
+  status = svg_cairo_create (&svgw->svgCanvas.svg_cairo);
+  if (!status)
     {
-	win->cmap = XCreateColormap (dpy, RootWindow (dpy, win->scr),
-				     win->visual, AllocNone);
-	attributes.override_redirect = False;
-	attributes.background_pixel = 0;
-	attributes.border_pixel = 0;
-	attributes.colormap = win->cmap;
-	attributemask = (CWBackPixel|
-			 CWBorderPixel|
-			 CWOverrideRedirect |
-			 CWColormap);
-	win->depth = 32;
-    }
-    else
-    {
-	win->cmap = DefaultColormap (dpy, win->scr);
-	win->visual = DefaultVisual (dpy, win->scr);
-	attributes.background_pixel = WhitePixel (dpy, win->scr);
-	attributes.border_pixel = BlackPixel (dpy, win->scr);
-	attributemask = (CWBackPixel |
-			 CWBorderPixel);
-	win->depth = DefaultDepth (dpy, win->scr);
-    }
-    
-#if CURSOR_CODE_IS_FIXED
-    /* #### I think this should be handled by XEmacs */
-    win->arrow = XcursorLibraryLoadCursor (dpy, "left_ptr");
-    win->watch = XcursorLibraryLoadCursor (dpy, "watch");
-#endif
-    if (win->full_mode) {
-	XWindowAttributes   root_attr;
-	XGetWindowAttributes (win->dpy,
-			      RootWindow (win->dpy, win->scr), &root_attr);
-	win->width = root_attr.width;
-	win->height = root_attr.height;
-    } else if (geometry) {
-	/* #### these are members of a Widget */
-	int x, y;	
-	XParseGeometry (geometry, &x, &y, &win->width, &win->height);
-    } else {
-        svg_cairo_get_size (win->svgc, &win->width, &win->height);
+      svg_cairo_set_viewport_dimension (svgw->svgCanvas.svg_cairo,
+					svgw->core.width, svgw->core.height);
+
+      /* #### this is wrong, we want to parse a string!! */
+      status = svg_cairo_parse_file (svgw->svgCanvas.svg_cairo, stdin);
     }
 
-    /* creation of the window is handled by XtRealize */
-    win_name (win);		/* #### Handles name, title, properties.
-				   Omit? */
+  /* XEmacs will provide keyboard input handlers.  If we actually handle
+     keyboard input in this widget at all, we should just pass the event
+     up to XEmacs. */
 
-    /* We're not top-level, so full-screen is irrelevant */
+  /* we're not toplevel so don't participate in window manager protocols */
 
-    /* #### I think this bogosity is due to X11 not handling trivial objects
-       gracefully.  We should do that ourselves rather than "trick" X11. */
-    if (!win->width)
-	win->width = 1;
-    if (!win->height)
-	win->height = 1;
-    win->pix = XCreatePixmap(dpy, win->win, win->width, win->height, win->depth);
-    /* #### what does "argb" mean? */
-    if (argb)
-	gcv.foreground = 0;
-    else
-	gcv.foreground = WhitePixel(dpy, win->scr);
-    win->gc = XCreateGC(dpy, win->pix, GCForeground, &gcv);
-    /* initialize the work buffer */
-    XFillRectangle(dpy, win->pix, win->gc, 0, 0, win->width, win->height);
-
-    /* XEmacs will provide keyboard input handlers.  If we actually handle
-       keyboard input in this widget at all, we should just pass the event
-       up to XEmacs. */
-
-    /* END CAIRO HANDLING */
-    /* #### for dynamic display maybe we need to hang on to the surface? */
-    /* #### we probably should refactor Cairo handling to make generalization
-       to other XEmacs display types more straightforward */
-    surface = cairo_xlib_surface_create (dpy,
-					 win->pix,
-					 win->visual,
-					 win->width, win->height);
-    win->cr = cairo_create (surface);
-    cairo_surface_destroy (surface);
-    /* XXX: This probably doesn't need to be here (eventually) */
-    cairo_set_source_rgb (win->cr, 1, 1, 1);
-
-    svg_cairo_set_viewport_dimension (win->svgc, win->width, win->height);
-    /* END CAIRO HANDLING */
-
-    /* #### How should we handle key presses?  I guess that native widgets
-       handle their own key presses.  In Xt, I think they should just queue
-       an XEmacs key event.  But Andy's widgets actually execute code? */
-    win->event_mask = (KeyPressMask
-		       | StructureNotifyMask
-		       | ExposureMask);
-    XSelectInput (dpy, win->win, win->event_mask);
-
-    /* we don't participate in window manager protocols */
-
-    /* window mapping is done by Xt when realizing or so */
-}
-#endif /* NOT_YET_USED_CODE_FROM_xsvg */
+  /* window mapping is done by Xt when realizing or so */
 }
 
 static void
@@ -465,7 +343,10 @@ SVGCanvasDestroy (Widget w)
 {
   SVGCanvasWidget svgw = (SVGCanvasWidget) w;
 
-  /* #### DESTROY THE cairo HERE! */
+  svg_cairo_destroy (svgw->svgCanvas.svg_cairo);
+  svgw->svgCanvas.svg_cairo = NULL;
+  cairo_destroy (svgw->svgCanvas.cairo);
+  svgw->svgCanvas.cairo = NULL;
 
 #ifndef YAGNI
   if (svgw->svgCanvas.selstr != NULL)
@@ -473,9 +354,6 @@ SVGCanvasDestroy (Widget w)
 
   if (svgw->svgCanvas.selected != None)
     XtDisownSelection (w, svgw->svgCanvas.selected, CurrentTime);
-
-  /* The SVGCanvas widget probably doesn't need an inverse GC? */
-  XtReleaseGC (w, svgw->svgCanvas.inverse_GC);
 
   /* Remove any timeouts associated with dynamic behavior of the widget. */
   if (svgw->svgCanvas.update > 0)
@@ -512,7 +390,7 @@ SVGCanvasExpose (Widget w, XEvent event, Region UNUSED (region))
   register Display	*dpy = XtDisplay(w);
   register Window	win = XtWindow(w);
 
-  XCopyArea (dpy, svgw->pix, win, svgw->gc,
+  XCopyArea (dpy, svgw->svgCanvas.pix, win, svgw->core.gc,
 	     event->x, event->y, event->width, event->height,
 	     event->x, event->y);
 }
@@ -543,7 +421,7 @@ SVGCanvasSetValues (Widget   old,
 
   if (was_resized) {
     if (svgw->label.resize)
-      SVGCanvasSize (svgw, &svgw->core.width, &svgw->core.height, DEF_LEN);
+      SVGCanvasSize (svgw, &svgw->core.width, &svgw->core.height);
     else
       SVGCanvasResize (new_);
   }
@@ -579,7 +457,7 @@ SVGCanvasQueryGeometry (Widget w,
     return XtGeometryNo;
 
   preferred->request_mode = CWWidth | CWHeight;
-  SVGCanvasSize (svgw, &preferred->width, &preferred->height, DEF_LEN);
+  SVGCanvasSize (svgw, &preferred->width, &preferred->height);
 
   if ((!(intended->request_mode & CWWidth) ||
        intended->width >= preferred->width)  &&
@@ -828,44 +706,99 @@ SVGCanvasGetSelCB (Widget    w,
  *
  ****************************************************************/
 
-/* Determine the preferred size for this widget.  choose 100x100 for
- * debugging.
- */
+/* Initialize the Cairo surface.  Must be called after realization. */
+
+static int
+SVGCanvasPrepareSurface (SVGCanvasWidget svgw)
+{
+  Display	  *dpy = XtDisplay ((Widget) svgw);
+  Window	  win = XtWindow ((Widget) svgw);
+
+  /* allocate a work buffer */
+  /* #### I think this bogosity is due to X11 not handling vacuous objects
+     gracefully.  We should do that ourselves rather than "trick" X11. */
+  if (!svgw->core.width)
+    svgw->core.width = 1;
+  if (!svgw->core.height)
+    svgw->core.height = 1;
+  svgw->svgCanvas.pix = XCreatePixmap (dpy, win, svgw->core.width,
+				       svgw->core.height, svgw->core.depth);
+
+  /* clear the work buffer */
+  {
+    XGCValues gcv;
+    Screen *scr = XtScreen ((Widget) svgw);
+
+    /* #### xsvg checks for ARGB visual for XRender and doesn't use
+       WhitePixel in that case, but we don't really know how to handle
+       that; anyway XEmacs chooses the visual */
+    gcv.foreground = WhitePixelOfScreen (dpy, scr);
+    svgw->label.normal_GC = XtGetGC (dpy, svgw->svgCanvas.pix,
+				     GCForeground, &gcv);
+    XFillRectangle (dpy, svgw->svgCanvas.pix, svgw->label.normal_GC, 0, 0,
+		    svgw->core.width, svgw->core.height);
+  }
+
+  /* #### for dynamic display maybe we need to hang on to the surface? */
+  /* #### we probably should refactor Cairo handling to make generalization
+     to other XEmacs display types more straightforward */
+  {
+    cairo_surface_t *surface;
+
+    if (svgw->svgCanvas.svg_cairo)
+      svg_cairo_destroy (svgw->svgCanvas.svg_cairo);
+    svgw->svgCanvas.svg_cairo = NULL;
+
+    surface = cairo_xlib_surface_create (dpy,
+					 svgw->svgCanvas.pix,
+					 svgw->core.visual,
+					 svgw->core.width,
+					 svgw->core.height);
+    svgw->svgCanvas.cairo = cairo_create (surface);
+    cairo_surface_destroy (surface);
+  }
+  /* XXX: This probably doesn't need to be here (eventually) */
+  cairo_set_source_rgb (svgw->svgCanvas.cairo, 1, 1, 1);
+
+  /* #### this should be unnecessary, except we might set geometry above */
+  svg_cairo_set_viewport_dimension (svgw->svgCanvas.svg_cairo,
+				    svgw->core.width,
+				    svgw->core.height);
+
+#ifndef YAGNI
+  /* #### This probably belongs in a realize procedure. */
+
+  /* #### How should we handle key presses?  I guess that native widgets
+     handle their own key presses.  In Xt, I think they should just queue
+     an XEmacs key event.  But Andy's widgets actually execute code? */
+  svgw->core.event_mask = (KeyPressMask
+		     | StructureNotifyMask
+		     | ExposureMask);
+  XSelectInput (dpy, svgw->core.win, svgw->core.event_mask);
+
+  /* Initialize selection data. */
+  svgw->svgCanvas.selected = None;
+  svgw->svgCanvas.selstr = NULL;
+
+  /* #### What's this? */
+  if (svgw->svgCanvas.update > 0)
+    EnableUpdate (svgw);
+#endif /* YAGNI */
+}
+
+/* Determine the preferred size for this widget. */
 
 static void
 SVGCanvasSize (SVGCanvasWidget	svgw,
 	       Dimension	*wid,
-	       Dimension	*hgt,
-	       Dimension	min_len)
+	       Dimension	*hgt)
 {
-  int	w,h;		/* width, height of svgCanvas */
-
-  /* find total height (width) of contents */
-
-  /* find minimum size for undecorated svgCanvas */
-
-  if (svgw->svgCanvas.orientation == XtorientHorizontal)
-    {
-      w = min_len;
-      h = GA_WID+2;			/* svgCanvas itself + edges */
-    }
-  else
-    {
-      w = GA_WID+2;
-      h = min_len;
-    }
-
-  *wid = w;
-  *hgt = h;
+  /* find total height and width of contents */
+  svg_cairo_get_size (svgw->svgCanvas.svg_cairo, wid, hgt);
 }
 
 
 #ifndef YAGNI
-static void
-AutoScale (SVGCanvasWidget svgw)
-{
-}
-
 static	void
 EnableUpdate (SVGCanvasWidget svgw)
 {
@@ -880,7 +813,6 @@ DisableUpdate (SVGCanvasWidget svgw)
 {
   XtRemoveTimeOut (svgw->svgCanvas.intervalId);
 }
-#endif
 
 static	GC
 Get_GC (SVGCanvasWidget	svgw,
@@ -895,3 +827,4 @@ Get_GC (SVGCanvasWidget	svgw,
 
   return XtAllocateGC ((Widget) svgw, 0, vmask, &values, 0L, umask);
 }
+#endif /* YAGNI */
