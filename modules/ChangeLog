@@ -1,3 +1,13 @@
+2006-09-10  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* earl/earl.c (finalize_session_handle): Remove unwanted #endif.
+	transport_data member is "finalize", and it's dereferenced as a
+	pointer, not a struct.
+
+	* earl/earl.c (session_handle_remprop): 
+	* neon/neon_api.c (session_handle_remprop):
+	Fix erroneous return.
+	
 2006-01-11  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* neon/.cvsignore:

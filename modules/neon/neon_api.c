@@ -363,7 +363,7 @@ session_handle_remprop (Lisp_Object session, Lisp_Object prop)
       || EQ (prop, Qtransport))
     return -1;
   else
-    return external_remprop (&s->plist, prop, 0, ERROR_ME) ? Qt : Qnil;
+    return external_remprop (&s->plist, prop, 0, ERROR_ME);
 }
 
 static Lisp_Object

@@ -101,9 +101,7 @@ finalize_session_handle (void *header, int for_disksave)
 
   /* #### needs to be generic */
   if (!NILP (session_handle->transport))
-    session_handle->transport_data.finalizer
-      (session_handle->transport_data);
-#endif
+    session_handle->transport_data->finalize (session_handle->transport_data);
 
   /* #### UNIMPLEMENTED we need to free the big_ball_of_strings here. */
 }
@@ -137,7 +135,7 @@ print_session_handle (Lisp_Object obj,
     write_c_string (printcharfun, "(dead) ");
   else
     write_fmt_string_lisp (printcharfun, "%S ", 1, session_handle->transport);
-  if (session_handle->url)
+  if (!NILP (session_handle->url))
     write_fmt_string_lisp (printcharfun, "%S", 1, session_handle->url);
   write_fmt_string (printcharfun, " 0x%lx>", (unsigned long) session_handle);
 }
@@ -188,9 +186,9 @@ session_handle_remprop (Lisp_Object session, Lisp_Object prop)
       || EQ (prop, Qurl)
       || EQ (prop, Qcoding_system)
       || EQ (prop, Qtransport))
-    return -1;
+    return -1;			/* immutable properties */
   else
-    return external_remprop (&s->plist, prop, 0, ERROR_ME) ? Qt : Qnil;
+    return external_remprop (&s->plist, prop, 0, ERROR_ME);
 }
 
 static Lisp_Object
