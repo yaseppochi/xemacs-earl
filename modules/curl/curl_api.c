@@ -24,7 +24,7 @@
 #include "lstream.h"
 #include "elhash.h"
 
-#include "curl_api.h"		/* include <curl/curl.h> */
+#include "curl_api.h"		/* include <curl/curl.h> and "earl.h" */
 
 /************************************************************************/
 /*			   Module-specific stuff			*/
@@ -35,6 +35,9 @@ static Lisp_Object Qcurl_api, Qcurl, Qurl_handlep,
   Qlong, Qfunctionpoint, Qobjectpoint, Qoff_t, Qdouble;
 
 static Lisp_Object Vcurl_option_hash_table, Vcurl_info_hash_table;
+
+/* #### Probably should be a little more session_handle-oriented. */
+#ifndef HAVE_EARL
 
 /************************************************************************/
 /*                  url_handle lrecord basic functions                  */
@@ -172,6 +175,7 @@ Return the server host of the connection URL-HANDLE, as a string.
   return WHAT?
 }
 #endif
+#endif /* HAVE_EARL */
 
 
 /************************************************************************/
