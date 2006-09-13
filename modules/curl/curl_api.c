@@ -32,153 +32,9 @@
 
 /* Local references to Lisp symbols */
 static Lisp_Object Qcurl_api, Qcurl,
-#ifndef HAVE_EARL
-  Qurl_handlep,
-#endif /* HAVE_EARL */
   Qlong, Qfunctionpoint, Qobjectpoint, Qoff_t, Qdouble;
 
 static Lisp_Object Vcurl_option_hash_table, Vcurl_info_hash_table;
-
-/* #### Probably should be a little more session_handle-oriented. */
-#ifndef HAVE_EARL
-
-/************************************************************************/
-/*                  url_handle lrecord basic functions                  */
-/************************************************************************/
-
-static const struct memory_description url_handle_description [] = {
-  { XD_LISP_OBJECT, offsetof (struct Lisp_URL_Handle, type) },
-  { XD_LISP_OBJECT, offsetof (struct Lisp_URL_Handle, property_list) },
-  { XD_LISP_OBJECT, offsetof (struct Lisp_URL_Handle, coding_system) },
-  { XD_END }
-};
-
-static Lisp_Object
-mark_url_handle (Lisp_Object obj)
-{
-  if (NILP (XURL_HANDLE (obj)->property_list))
-    return XURL_HANDLE (obj)->type;
-
-  mark_object (XURL_HANDLE (obj)->coding_system);
-  mark_object (XURL_HANDLE (obj)->type);
-  return XURL_HANDLE (obj)->property_list;
-}
-
-static void
-print_url_handle (Lisp_Object obj,
-		  Lisp_Object printcharfun,
-		  int UNUSED (escapeflag))
-{
-  Lisp_URL_Handle *url_handle = XURL_HANDLE (obj);
-
-  if (print_readably)
-    printing_unreadable_object ("#<url_handle %s>", url_handle->url);
-
-  write_c_string (printcharfun, "#<url_handle ");
-  if (NILP(url_handle->type))
-    write_c_string (printcharfun, "(dead) ");
-  else
-    write_fmt_string_lisp (printcharfun, "%S ", 1, url_handle->type);
-  if (url_handle->url)
-    write_c_string (printcharfun, url_handle->url);
-  write_fmt_string (printcharfun, " 0x%lx>", (unsigned long) url_handle);
-}
-
-static Lisp_URL_Handle *
-allocate_url_handle (void)
-{
-  Lisp_URL_Handle *url_handle =
-    ALLOC_LCRECORD_TYPE (Lisp_URL_Handle, &lrecord_url_handle);
-
-  url_handle->type = Qnil;
-  url_handle->property_list = Qnil;
-  url_handle->coding_system = Qnil;
-  url_handle->url = NULL;
-  url_handle->curl_handle = NULL;
-  /* #### UNIMPLEMENTED we need to initialize the big_ball_of_strings here. */
-  return url_handle;
-}
-
-static void
-finalize_url_handle (void *header, int for_disksave)
-{
-  Lisp_URL_Handle *url_handle = (Lisp_URL_Handle *) header;
-
-  if (for_disksave)
-    invalid_operation ("Can't dump an emacs containing URL_HANDLE objects",
-		       wrap_url_handle (url_handle));
-
-  /* #### UNIMPLEMENTED we need to free the big_ball_of_strings here. */
-  if (url_handle->curl_handle)
-    curl_easy_cleanup (url_handle->curl_handle);
-  url_handle->curl_handle = NULL;
-  if (url_handle->url)
-    xfree (url_handle->url, Extbyte *);
-  url_handle->url = NULL;
-}
-
-DEFINE_LRECORD_IMPLEMENTATION ("url_handle", url_handle, 0,
-                               mark_url_handle, print_url_handle,
-			       finalize_url_handle,
-                               NULL, NULL,
-			       url_handle_description, Lisp_URL_Handle);
-
-
-/************************************************************************/
-/*                        Basic url_handle accessors                          */
-/************************************************************************/
-
-/* ###autoload */
-DEFUN ("url-handle-p", Furl_handle_p, 1, 1, 0, /*
-Return t if OBJECT is a URL_HANDLE connection.
-*/
-       (object))
-{
-  return URL_HANDLEP (object) ? Qt : Qnil;
-}
-
-DEFUN ("url-handle-type", Furl_handle_type, 1, 1, 0, /*
-Return the type of URL-HANDLE, a symbol.
-*/
-       (url_handle))
-{
-  CHECK_URL_HANDLE (url_handle);
-  return XURL_HANDLE (url_handle)->type;
-}
-
-DEFUN ("url-handle-live-p", Furl_handle_live_p, 1, 1, 0, /*
-Return non-nil if URL_HANDLE is an active URL_HANDLE connection.
-*/
-       (url_handle))
-{
-  CHECK_URL_HANDLE (url_handle);
-  return Furl_handle_type (url_handle);
-}
-
-DEFUN ("url-handle-property-list", Furl_handle_host, 1, 1, 0, /*
-Return the property list of URL-HANDLE.
-*/
-       (url_handle))
-{
-  Lisp_Object retval;
-
-  CHECK_URL_HANDLE (url_handle);
-  retval = XURL_HANDLE (url_handle)->property_list;
-  /* #### extract properties from the curl_handle and add to retval here */
-  return retval;
-}
-
-#if 0
-DEFUN ("url-handle-host", Furl_handle_host, 1, 1, 0, /*
-Return the server host of the connection URL-HANDLE, as a string.
-*/
-       (url_handle))
-{
-  CHECK_URL_HANDLE (url_handle);
-  return WHAT?
-}
-#endif
-#endif /* HAVE_EARL */
 
 
 /************************************************************************/
@@ -505,26 +361,12 @@ modules_of_curl_api ()
 void
 syms_of_curl_api ()
 {
-#ifndef HAVE_EARL
-  INIT_LRECORD_IMPLEMENTATION (url_handle);
-
-  /* #### These functions will move to the earl module. */
-  DEFSUBR (Furl_handle_p);
-  DEFSUBR (Furl_handle_live_p);
-  DEFSUBR (Furl_handle_host);
-  DEFSUBR (Furl_handle_type);
-#endif /* HAVE_EARL */
 
   /* cURL-specific functions. */
   DEFSUBR (Fcurl_make_url_handle);
   DEFSUBR (Fcurl_easy_perform);
   DEFSUBR (Fcurl_easy_setopt);
   DEFSUBR (Fcurl_easy_getinfo);
-
-#ifndef HAVE_EARL
-  /* #### These symbols will move to the earl module. */
-  DEFSYMBOL_MULTIWORD_PREDICATE (Qurl_handlep);
-#endif /* HAVE_EARL */
 
   /* cURL-specific symbols. */
   DEFSYMBOL (Qcurl_api);	/* feature symbol */
@@ -597,9 +439,6 @@ unload_curl_api ()
 
   unstaticpro_nodump (&Qcurl_api);
   unstaticpro_nodump (&Qcurl);
-#ifndef HAVE_EARL
-  unstaticpro_nodump (&Qurl_handlep);
-#endif /* HAVE_EARL */
   unstaticpro_nodump (&Qlong);
   unstaticpro_nodump (&Qfunctionpoint);
   unstaticpro_nodump (&Qobjectpoint);

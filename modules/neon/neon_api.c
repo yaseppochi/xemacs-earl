@@ -157,11 +157,6 @@ static int neon_credentials_cb (void *userdata, const char *rlm,
 /* Local references to Lisp symbols */
 
 static Lisp_Object Qneon_api, Qneon, Qinfinity, Qwebdav_xml, Qaccept_always,
-#ifndef HAVE_EARL
-  Qlast_response_headers, Qlast_response_status,
-  Qsession_handlep, Qsession_handle_livep, Qtransport,
-  Qurl, Qcoding_system,
-#endif
   Qaccept_2xx, Qauthorization_failure, Qproxy_authorization_failure,
   Qconnection_failure, Qtimeout, Qgeneric_error;
 
@@ -201,286 +196,6 @@ void finalize_neon_data (struct neon_data *neon)
     }
   neon = NULL;
 }
-
-#ifndef HAVE_EARL
-#include "../earl/earl.c"
-#endif
-
-#if 0
-/************************************************************************/
-/*                 session_handle lrecord implementation                */
-/* Contents:								*/
-/*   session_handle_description						*/
-/*   allocate_session_handle						*/
-/*   finalize_session_handle						*/
-/*   mark_session_handle						*/
-/*   print_session_handle						*/
-/*   session_handle_get							*/
-/*   session_handle_put							*/
-/*   session_handle_remprop						*/
-/*   session_handle_plist						*/
-/*   DEFINE_LRECORD_IMPLEMENTATION					*/
-/************************************************************************/
-
-static const struct memory_description session_handle_description [] = {
-  { XD_LISP_OBJECT, offsetof (struct Lisp_Session_Handle, url) },
-  { XD_LISP_OBJECT, offsetof (struct Lisp_Session_Handle, transport) },
-  { XD_LISP_OBJECT, offsetof (struct Lisp_Session_Handle, coding_system) },
-  { XD_LISP_OBJECT,
-    offsetof (struct Lisp_Session_Handle, last_response_status) },
-  { XD_LISP_OBJECT,
-    offsetof (struct Lisp_Session_Handle, last_response_headers) },
-  { XD_LISP_OBJECT, offsetof (struct Lisp_Session_Handle, plist) },
-  { XD_LISP_OBJECT, offsetof (struct Lisp_Session_Handle, state) },
-  { XD_LISP_OBJECT, offsetof (struct Lisp_Session_Handle, stuff) },
-  { XD_END }
-};
-
-static Lisp_Session_Handle*
-allocate_session_handle (void)
-{
-  Lisp_Session_Handle *session_handle =
-    ALLOC_LCRECORD_TYPE (Lisp_Session_Handle, &lrecord_session_handle);
-
-  session_handle->url = Qnil;
-  session_handle->transport = Qnil;
-  session_handle->coding_system = Qnil;
-  session_handle->last_response_status = Qnil;
-  session_handle->last_response_headers = Qnil;
-  session_handle->plist = Qnil;
-  session_handle->state = Qnil;
-  session_handle->stuff = Qnil;
-  session_handle->transport_data = 0;
-  /* #### UNIMPLEMENTED we need to initialize the big_ball_of_strings here. */
-  return session_handle;
-}
-
-static void
-finalize_session_handle (void *header, int for_disksave)
-{
-  Lisp_Session_Handle *session_handle = (Lisp_Session_Handle *) header;
-
-  if (for_disksave)
-    invalid_operation ("Can't dump an emacs containing SESSION_HANDLE objects",
-		       wrap_session_handle (session_handle));
-
-  /* These could be a linked list of low-level-module-specific structures.
-     Actually, a single session_handle->handler_info member to be cast to
-     `TRANSPORT_handler_info *' should be enough, since we know the transport.  This
-     would allow resetting transport, too. */
-  /* This kind of task could be handled by having an array of finalizers,
-     indexed by enum lowlevel { min_lowlevel=0, curl=0, neon, max_lowlevel }
-     and called as
-         for (ll = min_lowlevel; ll < max_lowlevel; ll++)
-	   if (finalizers[ll])
-	     (*finalizers[ll]) (session_handle);
-  */
-
-  finalize_neon_data (NEON_DATA (session_handle));
-
-  /* #### UNIMPLEMENTED we need to free the big_ball_of_strings here. */
-}
-
-static Lisp_Object
-mark_session_handle (Lisp_Object obj)
-{
-  mark_object (XSESSION_HANDLE (obj)->url);
-  mark_object (XSESSION_HANDLE (obj)->transport);
-  mark_object (XSESSION_HANDLE (obj)->coding_system);
-  mark_object (XSESSION_HANDLE (obj)->last_response_status);
-  mark_object (XSESSION_HANDLE (obj)->last_response_headers);
-  mark_object (XSESSION_HANDLE (obj)->plist);
-  mark_object (XSESSION_HANDLE (obj)->state);
-  return XSESSION_HANDLE (obj)->stuff;
-}
-
-static void
-print_session_handle (Lisp_Object obj,
-		  Lisp_Object printcharfun,
-		  int UNUSED (escapeflag))
-{
-  Lisp_Session_Handle *session_handle = XSESSION_HANDLE (obj);
-
-  /* #### we should be able to do better */
-  if (print_readably)
-    printing_unreadable_object ("#<session_handle>");
-
-  write_c_string (printcharfun, "#<session_handle ");
-  if (NILP(session_handle->transport))
-    write_c_string (printcharfun, "(dead) ");
-  else
-    write_fmt_string_lisp (printcharfun, "%S ", 1, session_handle->transport);
-  if (session_handle->url)
-    write_fmt_string_lisp (printcharfun, "%S", 1, session_handle->url);
-  write_fmt_string (printcharfun, " 0x%lx>", (unsigned long) session_handle);
-}
-
-static Lisp_Object
-session_handle_get (Lisp_Object session, Lisp_Object prop)
-{
-  Lisp_Session_Handle *s = XSESSION_HANDLE (session);
-
-  if (EQ (prop, Qlast_response_headers))
-    return s->last_response_headers;
-  else if (EQ (prop, Qlast_response_status))
-    return s->last_response_status;
-  else if (EQ (prop, Qurl))
-    return s->url;
-  else if (EQ (prop, Qcoding_system))
-    return s->coding_system;
-  else if (EQ (prop, Qtransport))
-    return s->transport;
-  /* #### should we do curl_get_info here? */
-
-  return external_plist_get (&s->plist, prop, 0, ERROR_ME);
-}
-
-static int
-session_handle_put (Lisp_Object session, Lisp_Object prop, Lisp_Object value)
-{
-  Lisp_Session_Handle *s = XSESSION_HANDLE (session);
-
-  if (EQ (prop, Qlast_response_headers)
-      || EQ (prop, Qlast_response_status)
-      || EQ (prop, Qurl)
-      || EQ (prop, Qcoding_system)
-      || EQ (prop, Qtransport))
-    return 0;
-
-  external_plist_put (&s->plist, prop, value, 0, ERROR_ME);
-  return 1;
-}
-
-static int
-session_handle_remprop (Lisp_Object session, Lisp_Object prop)
-{
-  Lisp_Session_Handle *s = XSESSION_HANDLE (session);
-
-  if (EQ (prop, Qlast_response_headers)
-      || EQ (prop, Qlast_response_status)
-      || EQ (prop, Qurl)
-      || EQ (prop, Qcoding_system)
-      || EQ (prop, Qtransport))
-    return -1;
-  else
-    return external_remprop (&s->plist, prop, 0, ERROR_ME);
-}
-
-static Lisp_Object
-session_handle_plist (Lisp_Object session)
-{
-  Lisp_Object retval;
-  Lisp_Session_Handle *s;
-
-  CHECK_SESSION_HANDLE (session);
-  s = XSESSION_HANDLE (session);
-
-  retval = s->plist;
-  retval = cons3 (Qlast_response_status, s->last_response_status, retval);
-  retval = cons3 (Qlast_response_headers, s->last_response_headers, retval);
-  retval = cons3 (Qurl, s->url, retval);
-  retval = cons3 (Qcoding_system, s->coding_system, retval);
-  retval = cons3 (Qtransport, s->transport, retval);
-
-#ifdef HAVE_CURL
-  /* #### extract properties from the curl_handle and add to retval here */
-  /* #### should we do curl_get_info here? */
-#endif
-#ifdef HAVE_NEON
-  /* #### extract properties from the neon_data and add to retval here */
-#endif
-  return retval;
-}
-
-DEFINE_LRECORD_IMPLEMENTATION_WITH_PROPS ("session_handle", /* name */
-			       session_handle,		    /* c_name */
-			       0,			    /* dumpable */
-                               mark_session_handle,	    /* marker */
-			       print_session_handle,	    /* printer */
-			       finalize_session_handle,	    /* nuker */
-                               NULL,			    /* equal */
-			       NULL,			    /* hash */
-			       session_handle_description,  /* desc */
-			       session_handle_get,	    /* getprop */
-			       session_handle_put,	    /* putprop */
-			       session_handle_remprop,	    /* remprop */
-			       session_handle_plist,	    /* plist */
-			       Lisp_Session_Handle);        /* structtype */
-
-
-/************************************************************************/
-/*			   LISP object handling 			*/
-/************************************************************************/
-/*                   Basic session_handle functions                     */
-/* Contents:								*/
-/*   make-session-handle						*/
-/*   session-handle-transport						*/
-/*   session-handle-p							*/
-/*   session-handle-live-p						*/
-/*   session-handle-plist						*/
-/************************************************************************/
-
-DEFUN ("make-session-handle", Fmake_session_handle, 1, 2, 0, /*
-Return a session handle for URL.
-URL is a string, which must be a known URI scheme.  The 5-part schemes
-defined by RFC 2396 (scheme://authinfo@host:port/path) are always OK.
-Optional argument CODESYS is the coding system (an object or symbol, default
-UTF-8) used to encode URL.  URL must not be URL-encoded; that will be done
-automatically.
-
-Use `session-handle-p' to check whether an object is a session handle, and
-`session-handle-live-p' to determine whether it currently is associated
-with a transport \(and possibly an open connection, depending on protocol).
-\(The semantics of `session-handle-live-p' need to be refined.)
-
-Session handles support the property interface \(`put', `get', `remprop', and
-`object-plist').  The following properties are predefined and may not be set
-or removed by `put' or `remprop':
-    `url'			the initial URL
-    `last-response-status'	the protocol status of the response to the
-				last request
-    `last-response-headers'	the protocol headers from the response to the
-				last request
-The following properties are predefined and currently cannot be set or
-removed, but may be extended in the future:
-    `transport'			the module used to handle connections \(`curl'
-				and `neon' are implemented, others may be)
-    `coding-system'		the coding system used to encode URLs and
-				paths to resources
-*/
-       (url, codesys))
-{
-  Lisp_Session_Handle *session_handle = allocate_session_handle ();
-
-  if (NILP (codesys))
-    codesys = Fget_coding_system (Qutf_8);
-  CHECK_CODING_SYSTEM (codesys);
-  session_handle->coding_system = codesys;
-
-  CHECK_STRING (url);
-  session_handle->url = url;
-
-  return wrap_session_handle (session_handle);
-}
-
-/* ###autoload */
-DEFUN ("session-handle-p", Fsession_handle_p, 1, 1, 0, /*
-Return t if OBJECT is a SESSION_HANDLE connection.
-*/
-       (object))
-{
-  return SESSION_HANDLEP (object) ? Qt : Qnil;
-}
-
-DEFUN ("session-handle-live-p", Fsession_handle_live_p, 1, 1, 0, /*
-Return non-nil if SESSION_HANDLE is an active SESSION_HANDLE connection.
-*/
-       (session_handle))
-{
-  CHECK_SESSION_HANDLE (session_handle);
-  return Fget (session_handle, Qtransport, Qnil);
-}
-#endif /* 0 */
 
 
 /************************************************************************/
@@ -1742,7 +1457,7 @@ neon_credentials_cb (void *userdata, const char *rlm,
  * taking no parameters.
  */
 
-#ifdef HAVE_EARL
+#if defined(HAVE_EARL) && 0
 void
 modules_of_neon_api ()
 {
@@ -1754,13 +1469,6 @@ void
 syms_of_neon_api ()
 {
   INIT_LRECORD_IMPLEMENTATION (session_handle);
-
-#ifndef HAVE_EARL
-  /* #### These functions will move to the earl module. */
-  DEFSUBR (Fmake_session_handle);
-  DEFSUBR (Fsession_handle_p);
-  DEFSUBR (Fsession_handle_live_p);
-#endif
 
   /* neon-specific functions. */
 #ifndef LAZY_INITIALIZATION_IN_REQUEST
@@ -1793,17 +1501,6 @@ syms_of_neon_api ()
   DEFSYMBOL (Qconnection_failure);
   DEFSYMBOL (Qtimeout);
   DEFSYMBOL (Qgeneric_error);
-#ifndef HAVE_EARL
-  /* #### These symbols will move to the earl module. */
-  DEFSYMBOL_MULTIWORD_PREDICATE (Qsession_handlep);
-  DEFSYMBOL_MULTIWORD_PREDICATE (Qsession_handle_livep);
-
-  DEFSYMBOL (Qtransport);
-  DEFSYMBOL (Qlast_response_headers);
-  DEFSYMBOL (Qlast_response_status);
-  DEFSYMBOL (Qcoding_system);
-  DEFSYMBOL (Qurl);
-#endif
 }
 
 void
@@ -1874,15 +1571,5 @@ unload_neon_api ()
   unstaticpro_nodump (&Qconnection_failure);
   unstaticpro_nodump (&Qtimeout);
   unstaticpro_nodump (&Qgeneric_error);
-#ifndef HAVE_EARL
-  unstaticpro_nodump (&Qtransport);
-  unstaticpro_nodump (&Qlast_response_headers);
-  unstaticpro_nodump (&Qlast_response_status);
-  /* predicate special handling */
-  unstaticpro_nodump (&Qsession_handlep);
-  unstaticpro_nodump (&Qsession_handle_livep);
-  unstaticpro_nodump (&Qurl);
-  unstaticpro_nodump (&Qcoding_system);
-#endif
 }
 #endif

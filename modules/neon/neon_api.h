@@ -80,55 +80,6 @@ DECLARE_LRECORD (neon_data, Lisp_Neon_Data);
 #define CONCHECK_NEON_DATA(x) CONCHECK_RECORD (x, neon_data)
 #endif
 
-/* maybe we can just nuke the #ifdef since these should be identical? */
 #include "../earl/earl.h"
-#if 0
-/* This is Session_Handle, not Neon_Handle, because a generalization is
-   planned. */
-struct Lisp_Session_Handle
-{
-  struct LCRECORD_HEADER header;
-  /* property list for properties not contained in the cURL handle or
-     neon request or session;
-     READ-ONLY from Lisp?
-     This could be used to maintain state for a handler based on url.el or
-     an external process (eg, wget). */
-  Lisp_Object url;
-  /* type of the handle; READ-ONLY from Lisp
-     TRANSPORT currently is used as a flag for liveness; it must be reset
-     to nil if the handle can no longer be used by that transport */
-  Lisp_Object transport;
-  Lisp_Object plist;
-  /* the coding system used to convert url; READ-ONLY from Lisp */
-  Lisp_Object coding_system;
-  /* persistent r/w data passed as "userdata"; see enum neon_state_index */
-  Lisp_Object state;
-  /* auxiliary structures used internally */
-  Lisp_Object stuff;
-  Lisp_Object last_response_status;
-  Lisp_Object last_response_headers;
-  /* to be cast to `TRANSPORT_data *', since we know the transport.
-     This should allow resetting transport, too. */
-  void* transport_data;
-  /* #### UNIMPLEMENTED array of pointers to string data we need to free */
-  Dynarr *big_ball_of_strings;
-};
-typedef struct Lisp_Session_Handle Lisp_Session_Handle;
-
-DECLARE_LRECORD (session_handle, Lisp_Session_Handle);
-#define XSESSION_HANDLE(x) XRECORD (x, session_handle, Lisp_Session_Handle)
-#define wrap_session_handle(p) wrap_record (p, session_handle)
-#define SESSION_HANDLEP(x) RECORDP (x, session_handle)
-#define CHECK_SESSION_HANDLE(x) CHECK_RECORD (x, session_handle)
-#define CONCHECK_SESSION_HANDLE(x) CONCHECK_RECORD (x, session_handle)
-
-#define NEON_DATA(handle) ((struct neon_data *) (handle->transport_data))
-
-/* utilities */
-
-/* error macros */
-
-#define UNIMPLEMENTED(reason) signal_error (Qunimplemented, reason, Qunbound)
-#endif /* 0 */
 
 #endif /* include_NEON_API_H */

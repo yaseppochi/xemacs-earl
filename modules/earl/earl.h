@@ -107,8 +107,11 @@ struct Lisp_Session_Handle
   /* persistent r/w data passed as "userdata"; not visible from LISP
      see enum neon_state_index */
   Lisp_Object state;
+#if 0
+  /* #### UNUSED? */
   /* auxiliary structures used internally; not visible from LISP */
   Lisp_Object stuff;
+#endif
   /* a single session_handle->transport_data member to be cast to
      `TRANSPORT_handler_info *', since we know the transport.
      This would allow resetting transport, too. */

@@ -68,7 +68,6 @@ static const struct memory_description session_handle_description [] = {
     offsetof (struct Lisp_Session_Handle, last_response_headers) },
   { XD_LISP_OBJECT, offsetof (struct Lisp_Session_Handle, plist) },
   { XD_LISP_OBJECT, offsetof (struct Lisp_Session_Handle, state) },
-  { XD_LISP_OBJECT, offsetof (struct Lisp_Session_Handle, stuff) },
   { XD_END }
 };
 
@@ -85,7 +84,6 @@ allocate_session_handle (void)
   session_handle->last_response_headers = Qnil;
   session_handle->plist = Qnil;
   session_handle->state = Qnil;
-  session_handle->stuff = Qnil;
   session_handle->transport_data = NULL;
   /* #### UNIMPLEMENTED we need to initialize the big_ball_of_strings here. */
   return session_handle;
@@ -116,8 +114,7 @@ mark_session_handle (Lisp_Object obj)
   mark_object (XSESSION_HANDLE (obj)->last_response_status);
   mark_object (XSESSION_HANDLE (obj)->last_response_headers);
   mark_object (XSESSION_HANDLE (obj)->plist);
-  mark_object (XSESSION_HANDLE (obj)->state);
-  return XSESSION_HANDLE (obj)->stuff;
+  XSESSION_HANDLE (obj)->state;
 }
 
 static void
