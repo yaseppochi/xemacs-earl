@@ -34,6 +34,22 @@
 /*				Structures				*/
 /************************************************************************/
 
+struct curl_data {
+  /* the cURL handle used by the libcurl API */
+  CURL *curl_handle;
+};
+
+#if 0 /* not needed? */
+DECLARE_LRECORD (curl_data, Lisp_Curl_Data);
+#define XCURL_DATA(x) XRECORD (x, curl_data, Lisp_Curl_Data)
+#define wrap_curl_data(p) wrap_record (p, curl_data)
+#define CURL_DATAP(x) RECORDP (x, curl_data)
+#define CHECK_CURL_DATA(x) CHECK_RECORD (x, curl_data)
+#define CONCHECK_CURL_DATA(x) CONCHECK_RECORD (x, curl_data)
+#endif
+
+#define CURL_DATA(handle) ((struct curl_data *) (handle->state))
+
 #ifdef HAVE_EARL
 #include "../earl/earl.h"
 #else
@@ -66,6 +82,7 @@ DECLARE_LRECORD (url_handle, Lisp_URL_Handle);
 #define URL_HANDLEP(x) RECORDP (x, url_handle)
 #define CHECK_URL_HANDLE(x) CHECK_RECORD (x, url_handle)
 #define CONCHECK_URL_HANDLE(x) CONCHECK_RECORD (x, url_handle)
+
 #endif /* HAVE_EARL */
 
 #endif include_CURL_API_H

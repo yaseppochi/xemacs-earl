@@ -31,7 +31,10 @@
 /************************************************************************/
 
 /* Local references to Lisp symbols */
-static Lisp_Object Qcurl_api, Qcurl, Qurl_handlep,
+static Lisp_Object Qcurl_api, Qcurl,
+#ifndef HAVE_EARL
+  Qurl_handlep,
+#endif /* HAVE_EARL */
   Qlong, Qfunctionpoint, Qobjectpoint, Qoff_t, Qdouble;
 
 static Lisp_Object Vcurl_option_hash_table, Vcurl_info_hash_table;
@@ -195,6 +198,8 @@ Return the server host of the connection URL-HANDLE, as a string.
 			 index,                                       \
 			 handle)); } while (0)
 
+#undef LAZY_INITIALIZATION_IN_REQUEST 
+#ifndef LAZY_INITIALIZATION_IN_REQUEST
 DEFUN ("curl-make-url-handle", Fcurl_make_url_handle, 1, 3, 0, /*
 Return a cURL handle for URL, wrapped in an url-handle.
 URL is a string, which must be a URI scheme known to cURL.
@@ -210,37 +215,56 @@ from a function `make-url-handle'.
 */
       (url, codesys, plist))
 {
-  Lisp_URL_Handle *url_handle = allocate_url_handle ();
-
-  url_handle->type = Qcurl;
+  /* validates URL and CODESYS */
+  Lisp_Object session;		/* return value */
+  Lisp_Session_Handle *handle;
+  {
+    /* due to module design, can't call Fmake_session_handle directly */
+    Lisp_Object args[3];
+    args[0] = intern ("make-session-handle");
+    args[1] = url;
+    args[2] = codesys;
+    session = Ffuncall (3, args);
+  }
+  handle = XSESSION_HANDLE (session);
 
   if (NILP (codesys))
     /* #### Quick hack, should be Qnative? */
     codesys = Ffind_coding_system (Qutf_8);
   CHECK_CODING_SYSTEM (codesys);
-  url_handle->coding_system = codesys;
+  handle->coding_system = codesys;
 
+  /* cURL-specific
+     #### maybe all of this can be done lazily? */
   /* Do this *before* the plist because later we will be initializing
      curl_handle options from the plist. */
   CHECK_STRING (url);
-  url_handle->url = NEW_LISP_STRING_TO_EXTERNAL_MALLOC(url, codesys);
-  url_handle->curl_handle = curl_easy_init ();
-  curl_easy_setopt (url_handle->curl_handle, CURLOPT_URL, url_handle->url);
-
+  handle->url = url;
+  CURL_DATA (handle)->curl_handle = curl_easy_init ();
+  curl_easy_setopt (CURL_DATA (handle)->curl_handle,
+		    CURLOPT_URL,
+		    /* #### Probably needs to be in the big_ball_of_string. */
+		    NEW_LISP_STRING_TO_EXTERNAL_MALLOC(url, codesys));
+  /* end cURL-specific stuff */
+  
   /* skeleton - currently simply copies the plist
      This has the effect of checking well-formedness, and we may want
      to handle some properties specially. */
-  url_handle->property_list = Qnil;
+  handle->plist = Qnil;
   {
     EXTERNAL_PROPERTY_LIST_LOOP_3(key, value, plist)
       {
-	url_handle->property_list =
-	  Fcons (key, Fcons (value, url_handle->property_list));
+	handle->plist =
+	  Fcons (key, Fcons (value, handle->plist));
       }
   }
 
-  return wrap_url_handle (url_handle);
+  handle->transport = Qcurl;
+
+  /* return wrap_session_handle (handle); */
+  return session;
 }
+#endif /* LAZY_INITIALIZATION_IN_REQUEST */
 
 DEFUN ("curl-easy-setopt", Fcurl_easy_setopt, 3, 3, 0, /*
 Set OPTION to VALUE on curl url-handle HANDLE and return t.
@@ -259,15 +283,15 @@ is corrupt.
   CURLoption index;
   CURL *curl;
   CURLcode code;
-  Lisp_URL_Handle *h;
+  Lisp_Session_Handle *h;
 
   if (NILP (optdata))
     invalid_argument ("unrecognized cURL option", option);
-  CHECK_URL_HANDLE (handle);
-  h = XURL_HANDLE (handle);
-  if (!EQ (h->type, Qcurl))
+  CHECK_SESSION_HANDLE (handle);
+  h = XSESSION_HANDLE (handle);
+  if (!EQ (h->transport, Qcurl))
     wtaerror ("handle is not a curl handle", handle);
-  curl = h->curl_handle;
+  curl = CURL_DATA (h)->curl_handle;
   CHECK_INT (optindex);
   index = XINT (optindex);
 
@@ -333,14 +357,14 @@ Returns t.
 */
        (handle, buffer))
 {
-  CHECK_URL_HANDLE (handle);
+  CHECK_SESSION_HANDLE (handle);
   if (NILP (buffer))
     buffer = Fcurrent_buffer ();
   CHECK_BUFFER (buffer);
   
-  if (EQ (XURL_HANDLE (handle)->type, Qcurl))
+  if (EQ (XSESSION_HANDLE (handle)->transport, Qcurl))
     {
-      CURL *curl = XURL_HANDLE (handle)->curl_handle;
+      CURL *curl = CURL_DATA (XSESSION_HANDLE (handle))->curl_handle;
       if (curl)
 	{
 	  CURLcode code;
@@ -373,7 +397,7 @@ Returns t.
 DEFUN ("curl-easy-getinfo", Fcurl_easy_getinfo, 2, 2, 0, /*
 Return the value of ATTRIBUTE for HANDLE.
 ATTRIBUTE is a string denoting an attribute in `curl-info-hash-table'.
-HANDLE must be an url-handle object of type `curl'.
+HANDLE must be an url-handle object of transport `curl'.
 A wrapper with some validation for libcurl's `curl_easy_getinfo'.
 Errors without useful explanations probably mean `curl-info-hash-table'
 is corrupt.
@@ -387,16 +411,16 @@ String returns are encoded with the `binary' coding system.
   CURL *curl;
   CURLcode code;
   CURLoption index;
-  Lisp_URL_Handle *h;
+  Lisp_Session_Handle *h;
   Lisp_Object value;
 
   if (NILP (attdata))
     invalid_argument ("unrecognized cURL attribute", attribute);
-  CHECK_URL_HANDLE (handle);
-  h = XURL_HANDLE (handle);
-  if (!EQ (h->type, Qcurl))
+  CHECK_SESSION_HANDLE (handle);
+  h = XSESSION_HANDLE (handle);
+  if (!EQ (h->transport, Qcurl))
     wtaerror ("handle is not a curl handle", handle);
-  curl = h->curl_handle;
+  curl = CURL_DATA (h)->curl_handle;
   CHECK_INT (attindex);
   index = XINT (attindex);
 
@@ -481,6 +505,7 @@ modules_of_curl_api ()
 void
 syms_of_curl_api ()
 {
+#ifndef HAVE_EARL
   INIT_LRECORD_IMPLEMENTATION (url_handle);
 
   /* #### These functions will move to the earl module. */
@@ -488,6 +513,7 @@ syms_of_curl_api ()
   DEFSUBR (Furl_handle_live_p);
   DEFSUBR (Furl_handle_host);
   DEFSUBR (Furl_handle_type);
+#endif /* HAVE_EARL */
 
   /* cURL-specific functions. */
   DEFSUBR (Fcurl_make_url_handle);
@@ -495,8 +521,10 @@ syms_of_curl_api ()
   DEFSUBR (Fcurl_easy_setopt);
   DEFSUBR (Fcurl_easy_getinfo);
 
+#ifndef HAVE_EARL
   /* #### These symbols will move to the earl module. */
   DEFSYMBOL_MULTIWORD_PREDICATE (Qurl_handlep);
+#endif /* HAVE_EARL */
 
   /* cURL-specific symbols. */
   DEFSYMBOL (Qcurl_api);	/* feature symbol */
@@ -569,7 +597,9 @@ unload_curl_api ()
 
   unstaticpro_nodump (&Qcurl_api);
   unstaticpro_nodump (&Qcurl);
+#ifndef HAVE_EARL
   unstaticpro_nodump (&Qurl_handlep);
+#endif /* HAVE_EARL */
   unstaticpro_nodump (&Qlong);
   unstaticpro_nodump (&Qfunctionpoint);
   unstaticpro_nodump (&Qobjectpoint);
