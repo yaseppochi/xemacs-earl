@@ -1,3 +1,9 @@
+2006-09-13  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* neon/neon_api.c (Fneon_request_create): Change use of obsolete
+	HAVE_NEON_24_7 to NEON_USES_HEADER_CATCHER.
+	(neon_header_catcher): Improve comment.
+
 2006-09-10  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* earl/earl.c (finalize_session_handle): Remove unwanted #endif.

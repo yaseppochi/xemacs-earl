@@ -542,7 +542,7 @@ with lazy initialization of neon-specific session attributes in
   /* return wrap_session_handle (handle); */
   return session;
 }
-#endif
+#endif /* LAZY_INITIALIZATION_IN_REQUEST */
 
 /************************************************************************/
 /*			   Session authentication			*/
@@ -1110,7 +1110,7 @@ response status and headers are cleared.  Returns SESSION.
     /* clear results of last request */
     s->last_response_headers = Qnil;
     s->last_response_status = Qnil;
-#ifdef HAVE_NEON_0_24_7
+#ifdef NEON_USES_HEADER_CATCHER
     ne_add_response_header_catcher (NEON_DATA (s)->request,
 				    &neon->header_catcher,
 				    &(s->last_response_headers));
@@ -1542,7 +1542,8 @@ neon_header_catcher (void *userdata, const char *value)
 
   /* don't use ne_token and ne_shave because they either do evil things
      with the strings or allocate */
-  /* #### does this implement RFC 2822 WS? */
+  /* #### does this implement RFC 2822 WS?
+     It definitely doesn't implement folding whitespace. */
   s2 = s1 = strchr (value, ':');
   /* retreat s2 until it hits a non-space */
   for (s2-- ; s2 > value && (*s2 == ' ' || *s2 == '\t'); s2--) /* empty */ ;
