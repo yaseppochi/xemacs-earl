@@ -35,12 +35,13 @@
 /* #include "sysfile.h" */
 #include "earl.h"
 
-/* Local references to Lisp symbols */
+/* Local references to Lisp symbols
+   In GCC 4.0 they can't be static. */
 
-static Lisp_Object Qearl,
+Lisp_Object Qearl,
   Qlast_response_headers, Qlast_response_status,
   Qsession_handlep, Qsession_handle_livep, Qtransport,
-  Qurl, Qcoding_system;
+  Qurl;
 
 /************************************************************************/
 /*                 session_handle lrecord implementation                */
