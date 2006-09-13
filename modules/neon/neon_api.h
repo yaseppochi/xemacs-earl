@@ -21,11 +21,9 @@
 
 /* Commentary:
  *
- * This modules encapsulates a libneon request in a Lisp_URL_Handle.
- * Since neon requests are associated with persistent sessions, a handle
- * may also be used to identify a session.
- * This means that we must be very careful to cache the session and
- * destroy it at the appropriate time.
+ * This modules encapsulates a libneon request in a Lisp_Session_Handle.
+ * Since neon requests are associated with persistent sessions, we must be
+ * very careful to cache the session and destroy it at the appropriate time.
  */
 
 #include <neon/ne_request.h>	/* include ne_session.h,
