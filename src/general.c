@@ -50,6 +50,7 @@ syms_of_general (void)
 #include "general-slots.h"
 
 #undef SYMBOL
+#undef SYMBOL_MODULE_API
 #undef SYMBOL_KEYWORD
 #undef SYMBOL_GENERAL
 }

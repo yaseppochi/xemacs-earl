@@ -1,3 +1,9 @@
+2006-09-12  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* Makefile.in.in: .c.o rule needs to use -o so internal module builds work.
+
+	* general.c (syms_of_general): #undef SYMBOL_MODULE_API, too.
+
 2006-02-20  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* objects-x.c (x_font_instance_truename): Fix MULE string conversions.

@@ -424,7 +424,7 @@ ldflags += -Wl,--script=s/cygwin.sc
 #else
 .c.o:
 #endif
-	$(CC) -c $(cflags) $<
+	$(CC) -c $(cflags) -o $@ $<
 
 ## Create preprocessor output (debugging purposes only)
 .c.i:
