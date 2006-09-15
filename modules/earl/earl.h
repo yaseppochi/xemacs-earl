@@ -88,15 +88,15 @@
 struct Lisp_Session_Handle
 {
   struct LCRECORD_HEADER header;
-  /* URL used to initialize the handle; READ-ONLY from Lisp? */
+  /* string - URL used to initialize the handle; READ-ONLY from Lisp? */
   Lisp_Object url;
-  /* the coding system used to convert url; READ-ONLY from Lisp */
+  /* symbol - the coding system used to convert url; READ-ONLY from Lisp */
   Lisp_Object coding_system;
-  /* type of the handle; READ-ONLY from Lisp
+  /* symbol - type of the handle; READ-ONLY from Lisp
      TRANSPORT currently is used as a flag for liveness; it must be reset
      to nil if the handle can no longer be used by that transport */
   Lisp_Object transport;
-  /* information about last transfer */
+  /* string, list of strings - information about last transfer */
   Lisp_Object last_response_status;
   Lisp_Object last_response_headers;
   /* property list for properties not contained in the cURL handle or
