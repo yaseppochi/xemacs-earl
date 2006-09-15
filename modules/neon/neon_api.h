@@ -61,6 +61,10 @@ enum neon_state_index {
 };
 
 struct neon_data {
+  /* REQUIRED MEMBERS: SEE earl.h */
+   void (*finalize) (struct earl_transport_implementation *transport_data);
+
+  /* neon-specific data */
   /* storage for the neon session */
   ne_session *session;
   /* the neon request used by the libneon API */
@@ -79,5 +83,7 @@ DECLARE_LRECORD (neon_data, Lisp_Neon_Data);
 #endif
 
 #include "../earl/earl.h"
+
+#define NEON_DATA(handle) ((struct neon_data *) (handle->transport_data))
 
 #endif /* include_NEON_API_H */

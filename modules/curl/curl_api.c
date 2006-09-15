@@ -139,15 +139,15 @@ is corrupt.
   CURLoption index;
   CURL *curl;
   CURLcode code;
-  Lisp_Session_Handle *h;
+  Lisp_Session_Handle *session;
 
   if (NILP (optdata))
     invalid_argument ("unrecognized cURL option", option);
   CHECK_SESSION_HANDLE (handle);
-  h = XSESSION_HANDLE (handle);
-  if (!EQ (h->transport, Qcurl))
+  session = XSESSION_HANDLE (handle);
+  if (!EQ (session->transport, Qcurl))
     wtaerror ("handle is not a curl handle", handle);
-  curl = CURL_DATA (h)->curl_handle;
+  curl = CURL_DATA (session)->curl_handle;
   CHECK_INT (optindex);
   index = XINT (optindex);
 
@@ -170,12 +170,12 @@ is corrupt.
 	 which is part of the handle.  That will be freed when the handle
 	 is collected. */
       /* #### Is this the right coding system? */
-      s = NEW_LISP_STRING_TO_EXTERNAL_MALLOC (value, h->coding_system);
+      s = NEW_LISP_STRING_TO_EXTERNAL_MALLOC (value, session->coding_system);
       code = curl_easy_setopt (curl, (CURLoption) index, s);
       CHECK_CURL_ERROR (code, option, handle);
       if (index == CURLOPT_URL)
 	{
-	  h->url = s;
+	  session->url = value;
 	}
     }
   else if (EQ (opttype, Qfunctionpoint))
@@ -199,10 +199,13 @@ is corrupt.
 static size_t curl_write_function (void *data, size_t size, size_t nmemb,
 				   void *stream)
 {
-  size_t count = size * nmemb;
-  Lstream *s = XLSTREAM ((Lisp_Object) stream);
+  size_t byte_count = size * nmemb;
+  /* #### Gotta be a better way!  Cf. similar code in neon_api.c. */
+  Lisp_Object temp;
+  XPNTRVAL (temp) = (EMACS_UINT) stream;
+  Lstream *s = XLSTREAM (temp);
   /* #### the return code should be checked */
-  return (Lstream_write (s, data, count)) ? --count : count;
+  return (Lstream_write (s, data, byte_count)) ? --byte_count : byte_count;
 }
 
 /* #### Should this return the buffer, by analogy to `neon-request-request'? */

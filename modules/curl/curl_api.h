@@ -35,6 +35,10 @@
 /************************************************************************/
 
 struct curl_data {
+  /* REQUIRED MEMBERS: SEE earl.h */
+   void (*finalize) (struct earl_transport_implementation *transport_data);
+
+  /* cURL-specific data */
   /* the cURL handle used by the libcurl API */
   CURL *curl_handle;
 };
@@ -48,8 +52,8 @@ DECLARE_LRECORD (curl_data, Lisp_Curl_Data);
 #define CONCHECK_CURL_DATA(x) CONCHECK_RECORD (x, curl_data)
 #endif
 
-#define CURL_DATA(handle) ((struct curl_data *) (handle->state))
-
 #include "../earl/earl.h"
+
+#define CURL_DATA(handle) ((struct curl_data *) (handle->transport_data))
 
 #endif include_CURL_API_H

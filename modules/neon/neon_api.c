@@ -230,8 +230,7 @@ with lazy initialization of neon-specific session attributes in
     args[2] = codesys;
     session = Ffuncall (3, args);
   }
-  /* handle = XSESSION_HANDLE (session); */
-  handle = (Lisp_Session_Handle *) (session);
+  handle = XSESSION_HANDLE (session);
 
   /* neon-specific
      #### maybe all of this can be done lazily in neon-request-create? */
@@ -360,14 +359,14 @@ Returns no useful value \(nil).
     {
       ne_set_server_auth (NEON_DATA (s)->session,
 			  &neon_credentials_cb,
-			  (void *) server_cb);
+			  (void *) XPNTRVAL (server_cb));
       Faset (s->state, make_int (SERVER_CB), server_cb);
     }
   if (!NILP (proxy_cb))
     {
       ne_set_proxy_auth (NEON_DATA (s)->session,
 			 &neon_credentials_cb,
-			 (void *) proxy_cb);
+			 (void *) XPNTRVAL (proxy_cb));
       Faset (s->state, make_int (PROXY_CB), proxy_cb);
     }
 
@@ -805,7 +804,7 @@ response status and headers are cleared.  Returns SESSION.
     }
 #endif
 
-  if (s->transport != Qneon)
+  if (!EQ (s->transport, Qneon))
     wtaerror ("not a neon session", session);
   if (NEON_DATA (s) == NULL || NEON_DATA (s)->session == NULL)
     invalid_state ("neon session not initialized", session);
@@ -919,7 +918,7 @@ be hideous if it were UTF-8!)  (Verified for libneon 0.24.7.)
       /* #### if we make this a cons of b and c we can delete the lstreams */
       Faset (r->state, make_int (READER_LSTREAM), c);
       ne_add_response_body_reader (neon, accept_filter,
-				   &neon_write_lstream, (void *) c);
+				   &neon_write_lstream, (void *) XPNTRVAL (c));
       /* yes, for buffers the response is the reader */
       Faset (r->state, make_int (RESPONSE), reader);
     }
@@ -936,9 +935,10 @@ be hideous if it were UTF-8!)  (Verified for libneon 0.24.7.)
       NEON_DATA (r)->parser = ne_xml_create();
       ne_xml_push_handler(NEON_DATA (r)->parser,
 			  &neon_start_cb, &neon_cdata_cb, &neon_end_cb,
-			  (void *) r->state);
+			  (void *) XPNTRVAL (r->state));
       ne_add_response_body_reader (neon, accept_filter,
-				   &ne_xml_parse_v, (void *) NEON_DATA (r)->parser);
+				   &ne_xml_parse_v,
+				   (void *) NEON_DATA (r)->parser);
     }
   else
     {
@@ -1224,7 +1224,10 @@ neon_prepare_http_status (ne_request *neon)
 static int
 neon_write_lstream (void *stream, const char *data, size_t count)
 {
-  Lstream *s = XLSTREAM ((Lisp_Object) stream);
+  /* #### Gotta be a better way!  Cf. similar code in curl_api.c. */
+  Lisp_Object temp;
+  XPNTRVAL (temp) = (EMACS_UINT) stream;
+  Lstream *s = XLSTREAM (temp);
   if (count > 0)
     {
       /* #### the return code should be checked here, perhaps? */
@@ -1282,14 +1285,15 @@ neon_start_cb (void *userdata, int UNUSED(parent),
 	       const char *nspace, const char *name,
 	       const char **atts)
 {
-  Lisp_Object neon_state = (Lisp_Object) userdata;
-  Lisp_Object cs = Fget_coding_system (Faref (neon_state,
-					      make_int (CODING_SYSTEM)));
-  Lisp_Object ns = build_ext_string (nspace, cs);
-  Lisp_Object nm = build_ext_string (name, cs);
-  Lisp_Object ap = Qnil;
+  Lisp_Object neon_state, cs, ns, nm, ap, current;
+
+  XPNTRVAL (neon_state) = (EMACS_UINT) userdata;
+  cs = Fget_coding_system (Faref (neon_state, make_int (CODING_SYSTEM)));
+  ns = build_ext_string (nspace, cs);
+  nm = build_ext_string (name, cs);
+  ap = Qnil;
   /* (let ((current (aref state 1))) */
-  Lisp_Object current = Faref (neon_state, make_int (CURRENT));
+  current = Faref (neon_state, make_int (CURRENT));
   /* Lisp_Object tmp; */
   const char **a;
   int i;
@@ -1330,11 +1334,12 @@ static int
 neon_cdata_cb (void *userdata, int UNUSED(state),
 	       const char *cdata, size_t len)
 {
-  Lisp_Object neon_state = (Lisp_Object) userdata;
-  Lisp_Object cs = Fget_coding_system (Faref (neon_state,
-					      make_int (CODING_SYSTEM)));
+  Lisp_Object neon_state, cs, current;
+
+  XPNTRVAL (neon_state) = (EMACS_UINT) userdata;
+  cs = Fget_coding_system (Faref (neon_state, make_int (CODING_SYSTEM)));
   /* (let ((current (aref state 1))) */
-  Lisp_Object current = Faref (neon_state, make_int (CURRENT));
+  current = Faref (neon_state, make_int (CURRENT));
 
   /* (setcdr current (cons cdata (cdr current))) */
   Fsetcdr (current, Fcons (make_ext_string (cdata, len, cs), XCDR (current)));
@@ -1350,9 +1355,11 @@ static int
 neon_end_cb (void *userdata, int UNUSED(state),
 	     const char * UNUSED(nspace), const char * UNUSED(name))
 {
-  Lisp_Object neon_state = (Lisp_Object) userdata;
+  Lisp_Object current, neon_state;
+
   /* (let ((current (aref state 1))) */
-  Lisp_Object current = Faref (neon_state, make_int (CURRENT));
+  XPNTRVAL (neon_state) = (EMACS_UINT) userdata;
+  current = Faref (neon_state, make_int (CURRENT));
 
   /* #### abort if EQ (current, header) here?
      #### abort if NILP (Fcdr (current)) here? */
@@ -1368,9 +1375,10 @@ static int
 neon_credentials_cb (void *userdata, const char *rlm,
 			   int at, char *username, char *password)
 {
-  Lisp_Object callback = (Lisp_Object) userdata;
-  Lisp_Object credentials;
+  Lisp_Object credentials, callback;
   struct gcpro gcpro1;
+
+  XPNTRVAL (callback) = (EMACS_UINT) userdata;
 
   {
     struct gcpro ngcpro1;

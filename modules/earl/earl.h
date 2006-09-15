@@ -142,10 +142,4 @@ MODULE_API EXFUN (Fmake_session_handle, 2);
 
 #define UNIMPLEMENTED(reason) signal_error (Qunimplemented, reason, Qunbound)
 
-/* #### need to move back into transport-specific header files
-   currently they're here because finalization of Lisp_Session_Handle
-   calls destructors by name and they expect transport-specific data */
-#define NEON_DATA(handle) ((struct neon_data *) (handle->transport_data))
-#define CURL_DATA(handle) ((CURL *) (handle->transport_data))
-
 #endif /* include_EARL_H */
