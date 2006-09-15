@@ -128,13 +128,13 @@ print_session_handle (Lisp_Object obj,
   if (print_readably)
     printing_unreadable_object ("#<session_handle>");
 
-  write_c_string (printcharfun, "#<session_handle ");
+  write_c_string (printcharfun, "#<session_handle");
   if (NILP(session_handle->transport))
-    write_c_string (printcharfun, "(dead) ");
+    write_c_string (printcharfun, " (dead)");
   else
-    write_fmt_string_lisp (printcharfun, "%S ", 1, session_handle->transport);
+    write_fmt_string_lisp (printcharfun, " %S", 1, session_handle->transport);
   if (!NILP (session_handle->url))
-    write_fmt_string_lisp (printcharfun, "%S", 1, session_handle->url);
+    write_fmt_string_lisp (printcharfun, " %S", 1, session_handle->url);
   write_fmt_string (printcharfun, " 0x%lx>", (unsigned long) session_handle);
 }
 
