@@ -160,7 +160,7 @@ static int neon_credentials_cb (void *userdata, const char *rlm,
 
 static Lisp_Object Qneon_api, Qneon, Qinfinity, Qwebdav_xml, Qaccept_always,
   Qaccept_2xx, Qauthorization_failure, Qproxy_authorization_failure,
-  Qconnection_failure, Qtimeout, Qgeneric_error;
+  Qconnection_failure, Qgeneric_error;
 
 /************************************************************************/
 /*                   neon-specific structure handling                   */
@@ -181,12 +181,12 @@ static struct neon_data *
 allocate_neon_data (void)
 {
   struct neon_data *data = xmalloc (sizeof (struct neon_data));
-  data->earl_transport_implementation = &neon_transport;
+  data->transport_implementation = &neon_transport;
   return data;
 }
 
 static void
-finalize_neon_data (struct earl_transport_data *)
+finalize_neon_data (struct earl_transport_data *data)
 {
   struct neon_data *neon = (struct neon_data *) data;
   if (neon != NULL)
@@ -260,7 +260,7 @@ with lazy initialization of neon-specific session attributes in
     if (!u.port && !(u.port = ne_uri_defaultport (u.scheme)))
       signal_error (Qio_error, "neon: could not determine port for URL", url);
 
-    NEON_DATA (handle) = allocate_neon_data ();
+    handle->transport_data = (struct earl_transport_data *) allocate_neon_data ();
     NEON_DATA (handle)->session = ne_session_create (u.scheme, u.host, u.port);
     ne_uri_free (&u);
   }

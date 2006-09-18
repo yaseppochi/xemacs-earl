@@ -102,7 +102,7 @@ finalize_session_handle (void *header, int for_disksave)
     {
       struct earl_transport_data *data =
 	(struct earl_transport_data *) session_handle->transport_data;
-      data->finalize (data);
+      data->transport_implementation->finalize (data);
     }
 
   /* #### UNIMPLEMENTED we need to free the big_ball_of_string here. */
@@ -117,7 +117,7 @@ mark_session_handle (Lisp_Object obj)
   mark_object (XSESSION_HANDLE (obj)->last_response_status);
   mark_object (XSESSION_HANDLE (obj)->last_response_headers);
   mark_object (XSESSION_HANDLE (obj)->plist);
-  XSESSION_HANDLE (obj)->state;
+  return XSESSION_HANDLE (obj)->state;
 }
 
 static void

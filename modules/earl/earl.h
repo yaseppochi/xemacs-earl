@@ -85,6 +85,22 @@
  * and when they are installed.
  */
 
+/**************** some internal structures ****************/
+
+struct earl_transport_data;
+
+struct earl_transport_implementation {
+  void (*finalize) (struct earl_transport_data *transport_data);
+  /* #### We need getprop, putprop, and remprop methods for
+     transport-specific properties. */
+};
+
+struct earl_transport_data {
+  struct earl_transport_implementation *transport_implementation;
+};
+
+/**************** the main event ****************/
+
 struct Lisp_Session_Handle
 {
   struct LCRECORD_HEADER header;
@@ -115,21 +131,11 @@ struct Lisp_Session_Handle
   /* a single session_handle->transport_data member to be cast to
      `TRANSPORT_handler_info *', since we know the transport.
      This would allow resetting transport, too. */
-  struct earl_transport_implementation* transport_data;
+  struct earl_transport_data* transport_data;
   /* #### UNIMPLEMENTED array of pointers to string data we need to free */
   Dynarr *big_ball_of_string;
 };
 typedef struct Lisp_Session_Handle Lisp_Session_Handle;
-
-struct earl_transport_implementation {
-  void (*finalize) (struct earl_transport_data *transport_data);
-  /* #### We need getprop, putprop, and remprop methods for
-     transport-specific properties. */
-};
-
-struct earl_transport_data {
-  struct earl_transport_implementation *transport_implementation;
-};
 
 DECLARE_LRECORD (session_handle, Lisp_Session_Handle);
 #define XSESSION_HANDLE(x) XRECORD (x, session_handle, Lisp_Session_Handle)

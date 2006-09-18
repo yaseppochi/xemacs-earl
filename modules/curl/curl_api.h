@@ -19,6 +19,7 @@
  * Last-Modified:	2006-01-15
  */
 
+#include "../earl/earl.h"
 #include <curl/curl.h>
 
 /************************************************************************/
@@ -51,8 +52,6 @@ DECLARE_LRECORD (curl_data, Lisp_Curl_Data);
 #define CHECK_CURL_DATA(x) CHECK_RECORD (x, curl_data)
 #define CONCHECK_CURL_DATA(x) CONCHECK_RECORD (x, curl_data)
 #endif
-
-#include "../earl/earl.h"
 
 #define CURL_DATA(handle) ((struct curl_data *) (handle->transport_data))
 

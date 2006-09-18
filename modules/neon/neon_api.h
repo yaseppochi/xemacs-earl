@@ -26,6 +26,7 @@
  * very careful to cache the session and destroy it at the appropriate time.
  */
 
+#include "../earl/earl.h"
 #include <neon/ne_request.h>	/* include ne_session.h,
 				   ne_utils.h, ne_string.h,
 				   ne_defs.h, ne_ssl.h, ne_uri.h */
@@ -62,7 +63,7 @@ enum neon_state_index {
 
 struct neon_data {
   /* REQUIRED MEMBERS: SEE earl.h */
-   void (*finalize) (struct earl_transport_implementation *transport_data);
+   struct earl_transport_implementation *transport_implementation;
 
   /* neon-specific data */
   /* storage for the neon session */
@@ -81,8 +82,6 @@ DECLARE_LRECORD (neon_data, Lisp_Neon_Data);
 #define CHECK_NEON_DATA(x) CHECK_RECORD (x, neon_data)
 #define CONCHECK_NEON_DATA(x) CONCHECK_RECORD (x, neon_data)
 #endif
-
-#include "../earl/earl.h"
 
 #define NEON_DATA(handle) ((struct neon_data *) (handle->transport_data))
 

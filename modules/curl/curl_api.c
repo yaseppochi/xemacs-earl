@@ -56,7 +56,7 @@ static struct curl_data *
 allocate_curl_data (void)
 {
   struct curl_data *data = xmalloc (sizeof (struct curl_data));
-  data->earl_transport_implementation = &curl_transport;
+  data->transport_implementation = &curl_transport;
   return data;
 }
 
@@ -131,7 +131,7 @@ from a function `make-url-handle'.
      curl_handle options from the plist. */
   CHECK_STRING (url);
   handle->url = url;
-  CURL_DATA (handle) = allocate_curl_data ();
+  handle->transport_data = (struct earl_transport_data *) allocate_curl_data ();
   CURL_DATA (handle)->curl_handle = curl_easy_init ();
   curl_easy_setopt (CURL_DATA (handle)->curl_handle,
 		    CURLOPT_URL,
