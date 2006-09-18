@@ -123,6 +123,8 @@ typedef struct Lisp_Session_Handle Lisp_Session_Handle;
 
 struct earl_transport_implementation {
   void (*finalize) (struct earl_transport_implementation *transport_data);
+  /* #### We need getprop, putprop, and remprop methods for
+     transport-specific properties. */
 };
 
 DECLARE_LRECORD (session_handle, Lisp_Session_Handle);
@@ -140,6 +142,6 @@ MODULE_API EXFUN (Fmake_session_handle, 2);
 
 /* error macros */
 
-#define UNIMPLEMENTED(reason) signal_error (Qunimplemented, reason, Qunbound)
+#define UNIMPLEMENTED(description) signal_error (Qunimplemented, description, Qunbound)
 
 #endif /* include_EARL_H */

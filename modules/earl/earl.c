@@ -98,7 +98,6 @@ finalize_session_handle (void *header, int for_disksave)
     invalid_operation ("Can't dump an emacs containing SESSION_HANDLE objects",
 		       wrap_session_handle (session_handle));
 
-  /* #### needs to be generic */
   if (!NILP (session_handle->transport))
     session_handle->transport_data->finalize (session_handle->transport_data);
 
@@ -153,7 +152,8 @@ session_handle_get (Lisp_Object session, Lisp_Object prop)
     return s->coding_system;
   else if (EQ (prop, Qtransport))
     return s->transport;
-  /* #### should we do curl_get_info here? */
+
+  /* #### We should get transport-specific properties here. */
 
   return external_plist_get (&s->plist, prop, 0, ERROR_ME);
 }
@@ -168,6 +168,7 @@ session_handle_put (Lisp_Object session, Lisp_Object prop, Lisp_Object value)
       || EQ (prop, Qurl)
       || EQ (prop, Qcoding_system)
       || EQ (prop, Qtransport))
+    /* #### We should check transport-specific properties here. */
     return 0;
 
   external_plist_put (&s->plist, prop, value, 0, ERROR_ME);
@@ -184,6 +185,7 @@ session_handle_remprop (Lisp_Object session, Lisp_Object prop)
       || EQ (prop, Qurl)
       || EQ (prop, Qcoding_system)
       || EQ (prop, Qtransport))
+    /* #### We should check transport-specific properties here. */
     return -1;			/* immutable properties */
   else
     return external_remprop (&s->plist, prop, 0, ERROR_ME);
