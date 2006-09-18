@@ -38,12 +38,44 @@ static Lisp_Object Vcurl_option_hash_table, Vcurl_info_hash_table;
 
 
 /************************************************************************/
-/*			    Lisp API functions				*/
+/*                   cURL-specific structure handling                   */
+/* Contents:								*/
+/*   struct earl_transport_implementation curl_transport		*/
+/*   allocate_curl_data							*/
+/*   finalize_curl_data							*/
 /************************************************************************/
 
-/* error macros */
+static void finalize_curl_data (struct earl_transport_data *data);
 
-#define UNIMPLEMENTED(reason) signal_error (Qunimplemented, reason, Qunbound)
+static struct earl_transport_implementation curl_transport =
+  {
+    &finalize_curl_data
+  };
+
+static struct curl_data *
+allocate_curl_data (void)
+{
+  struct curl_data *data = xmalloc (sizeof (struct curl_data));
+  data->earl_transport_implementation = &curl_transport;
+  return data;
+}
+
+static void 
+finalize_curl_data (struct earl_transport_data *data)
+{
+  struct curl_data *curl = (struct curl_data *) data;
+  if (curl != NULL)
+    {
+      curl_easy_cleanup (curl->curl_handle);
+      curl->curl_handle = NULL;
+      xfree (curl, struct curl_data *);
+    }
+}
+
+
+/************************************************************************/
+/*			    Lisp API functions				*/
+/************************************************************************/
 
 /* #### Do something more useful with the error codes! */
 #define CHECK_CURL_ERROR(code, index, handle)                         \
@@ -92,10 +124,14 @@ from a function `make-url-handle'.
 
   /* cURL-specific
      #### maybe all of this can be done lazily? */
+  /* #### This needs to be wrapped in a condition-case so that cleanup happens
+     if anything fails.  Maybe moving plist handling up is enough, but that
+     assumes there's no cURL-specific stuff in the plist. */
   /* Do this *before* the plist because later we will be initializing
      curl_handle options from the plist. */
   CHECK_STRING (url);
   handle->url = url;
+  CURL_DATA (handle) = allocate_curl_data ();
   CURL_DATA (handle)->curl_handle = curl_easy_init ();
   curl_easy_setopt (CURL_DATA (handle)->curl_handle,
 		    CURLOPT_URL,

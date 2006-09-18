@@ -35,8 +35,8 @@
 /************************************************************************/
 
 struct curl_data {
-  /* REQUIRED MEMBERS: SEE earl.h */
-   void (*finalize) (struct earl_transport_implementation *transport_data);
+  /* REQUIRED MEMBER: SEE earl.h */
+   struct earl_transport_implementation *transport_implementation;
 
   /* cURL-specific data */
   /* the cURL handle used by the libcurl API */

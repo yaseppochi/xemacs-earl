@@ -85,7 +85,7 @@ allocate_session_handle (void)
   session_handle->plist = Qnil;
   session_handle->state = Qnil;
   session_handle->transport_data = NULL;
-  /* #### UNIMPLEMENTED we need to initialize the big_ball_of_strings here. */
+  /* #### UNIMPLEMENTED we need to initialize the big_ball_of_string here. */
   return session_handle;
 }
 
@@ -99,9 +99,13 @@ finalize_session_handle (void *header, int for_disksave)
 		       wrap_session_handle (session_handle));
 
   if (!NILP (session_handle->transport))
-    session_handle->transport_data->finalize (session_handle->transport_data);
+    {
+      struct earl_transport_data *data =
+	(struct earl_transport_data *) session_handle->transport_data;
+      data->finalize (data);
+    }
 
-  /* #### UNIMPLEMENTED we need to free the big_ball_of_strings here. */
+  /* #### UNIMPLEMENTED we need to free the big_ball_of_string here. */
 }
 
 static Lisp_Object

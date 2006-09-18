@@ -29,9 +29,6 @@
     387:  should we do curl_get_info here?
     390:  extract properties from the neon_data and add to retval here
     184:  transport-specific pointer blocks should be one pointer to structures
-    XXX:  big_ball_of_strings:
-    256:  initialize the big_ball_of_strings here.
-    283:  free the big_ball_of_strings here.
     XXX:  review coding-system usage, especially the session member
    1417:  return Qnil;		// maybe should be Qt?
    1427:  should we get the neon error string here, or provide an API?
@@ -51,6 +48,11 @@
 */
 
 /* DONE
+   2006-09-18
+    These were mooted by moving b_b_o_s to the earl module.
+    XXX:  big_ball_of_string:
+    256:  initialize the big_ball_of_string here.
+    283:  free the big_ball_of_string here.
    2006-01-12
     XXX:  reorganize this file
     198:  do we ever actually use this?  should we?
@@ -163,18 +165,30 @@ static Lisp_Object Qneon_api, Qneon, Qinfinity, Qwebdav_xml, Qaccept_always,
 /************************************************************************/
 /*                   neon-specific structure handling                   */
 /* Contents:								*/
-/*   struct neon_data							*/
+/*   struct earl_transport_implementation neon_transport		*/
 /*   allocate_neon_data							*/
 /*   finalize_neon_data							*/
 /************************************************************************/
 
-struct neon_data *allocate_neon_data ()
+static void finalize_neon_data (struct earl_transport_data *data);
+
+static struct earl_transport_implementation neon_transport =
+  {
+    &finalize_neon_data
+  };
+
+static struct neon_data *
+allocate_neon_data (void)
 {
-  return (struct neon_data *) xmalloc (sizeof (struct neon_data));
+  struct neon_data *data = xmalloc (sizeof (struct neon_data));
+  data->earl_transport_implementation = &neon_transport;
+  return data;
 }
 
-void finalize_neon_data (struct neon_data *neon)
+static void
+finalize_neon_data (struct earl_transport_data *)
 {
+  struct neon_data *neon = (struct neon_data *) data;
   if (neon != NULL)
     {
       /* Maybe order doesn't matter, but let's take no prisoners^Wchances! */
@@ -193,8 +207,8 @@ void finalize_neon_data (struct neon_data *neon)
 	  ne_request_destroy (neon->request);
 	  neon->request = NULL;
 	}
+      xfree (neon, struct neon_data *);
     }
-  neon = NULL;
 }
 
 

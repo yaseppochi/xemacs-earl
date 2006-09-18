@@ -117,14 +117,18 @@ struct Lisp_Session_Handle
      This would allow resetting transport, too. */
   struct earl_transport_implementation* transport_data;
   /* #### UNIMPLEMENTED array of pointers to string data we need to free */
-  Dynarr *big_ball_of_strings;
+  Dynarr *big_ball_of_string;
 };
 typedef struct Lisp_Session_Handle Lisp_Session_Handle;
 
 struct earl_transport_implementation {
-  void (*finalize) (struct earl_transport_implementation *transport_data);
+  void (*finalize) (struct earl_transport_data *transport_data);
   /* #### We need getprop, putprop, and remprop methods for
      transport-specific properties. */
+};
+
+struct earl_transport_data {
+  struct earl_transport_implementation *transport_implementation;
 };
 
 DECLARE_LRECORD (session_handle, Lisp_Session_Handle);
