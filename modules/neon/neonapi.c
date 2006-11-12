@@ -220,6 +220,7 @@ finalize_neon_data (struct earl_transport_data *data)
 
 #undef LAZY_INITIALIZATION_IN_REQUEST 
 #ifndef LAZY_INITIALIZATION_IN_REQUEST
+/* ###autoload */
 DEFUN ("neon-make-session-handle", Fneon_make_session_handle, 1, 2, 0, /*
 Return a neon session for URL, wrapped in a session handle.
 URL is a string, which must be a URI scheme known to neon.  Any path

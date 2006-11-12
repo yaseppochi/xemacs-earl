@@ -249,6 +249,7 @@ DEFINE_LRECORD_IMPLEMENTATION_WITH_PROPS ("session_handle", /* name */
 /*   session-handle-plist						*/
 /************************************************************************/
 
+/* ###autoload */
 DEFUN ("make-session-handle", Fmake_session_handle, 1, 2, 0, /*
 Return a session handle for URL.
 URL is a string, which must be a known URI scheme.  The 5-part schemes
@@ -301,6 +302,7 @@ Return t if OBJECT is a SESSION_HANDLE connection.
   return SESSION_HANDLEP (object) ? Qt : Qnil;
 }
 
+/* ###autoload */
 DEFUN ("session-handle-live-p", Fsession_handle_live_p, 1, 1, 0, /*
 Return non-nil if SESSION_HANDLE is an active SESSION_HANDLE connection.
 */

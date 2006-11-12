@@ -88,6 +88,7 @@ finalize_curl_data (struct earl_transport_data *data)
 
 #undef LAZY_INITIALIZATION_IN_REQUEST 
 #ifndef LAZY_INITIALIZATION_IN_REQUEST
+/* ###autoload */
 DEFUN ("curl-make-url-handle", Fcurl_make_url_handle, 1, 3, 0, /*
 Return a cURL handle for URL, wrapped in an url-handle.
 URL is a string, which must be a URI scheme known to cURL.
