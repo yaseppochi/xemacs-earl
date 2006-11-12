@@ -295,7 +295,7 @@ removed, but may be extended in the future:
 
 /* ###autoload */
 DEFUN ("session-handle-p", Fsession_handle_p, 1, 1, 0, /*
-Return t if OBJECT is a SESSION_HANDLE connection.
+Return t if OBJECT is a SESSION_HANDLE.
 */
        (object))
 {
@@ -304,7 +304,7 @@ Return t if OBJECT is a SESSION_HANDLE connection.
 
 /* ###autoload */
 DEFUN ("session-handle-live-p", Fsession_handle_live_p, 1, 1, 0, /*
-Return non-nil if SESSION_HANDLE is an active SESSION_HANDLE connection.
+Return non-nil if SESSION_HANDLE is an active SESSION_HANDLE.
 */
        (session_handle))
 {
