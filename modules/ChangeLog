@@ -1,5 +1,8 @@
 2007-05-10  Stephen J. Turnbull  <stephen@xemacs.org>
 
+	* neon/neon-test-sample-user.el: Remove.
+	* neon/neon-test.el: Add information from neon-test-sample-user.el.
+
 	* earl/earl.c: 
 	* curl/curlapi.c: 
 	* neon/neonapi.c:

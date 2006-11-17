@@ -12,7 +12,6 @@
 ;; a default definition which should be sufficient for testing.)
 ;; We also provide a variable to define an authentication header, which is
 ;; list of two strings (the tag and the contents).
-;; A sample implementation is provided as "neon-test-sample-user.el".
 
 ;; This file also contains a LISP emulation of the algorithms used in the
 ;; callbacks in the C code.
@@ -95,23 +94,25 @@ Default is \"/\", which should normally suffice.")
 		(base64-encode-string
 		 (concat neon-test-user ":" neon-test-secret))))
   "An HTTP header implementing RFC 2617 basic authentication with user
-`neon-test-user' and password `neon-test-secret', like `neon-test-auth-cb'.")
+`neon-test-user' and password `neon-test-secret', like `neon-test-auth-cb'.
+Currently unused by the test suite.")
 
 ;; Default authorization callback.
 ;; May be overridden in neon-test-user.el.
-(defun-when-void neon-test-auth-cb (iggy pop)
-  "Authenticate as `neon-test-user' with password `neon-test-secret'.
+(unless (fboundp 'neon-test-auth-cb)
+  (defun neon-test-auth-cb (iggy pop)
+    "Authenticate as `neon-test-user' with password `neon-test-secret'.
 IGGY is a string, the HTTP realm expected to be offered by the server
   \(currently ignored). 
 POP is an integer, the current count of previous \(failed) attempts \(we give
   up after 3 failures).
 Returns a cons of the values of `neon-test-user' and `neon-test-secret'."
-  ;; IGGY is ignored in this sample callback.
-  ;; We restrict consecutive failures to 3.  neon will try indefinitely, so
-  ;; we must do the restriction.
-  (if (>= pop 3)
-      pop			; hackish way to abort authentication
-    (cons neon-test-user neon-test-secret)))
+    ;; IGGY is ignored in this sample callback.
+    ;; We restrict consecutive failures to 3.  neon will try indefinitely, so
+    ;; we must do the restriction.
+    (if (>= pop 3)
+	pop				; hackish way to abort authentication
+      (cons neon-test-user neon-test-secret))))
 
 ;; Internal variables
 
