@@ -18,7 +18,45 @@
 
 (require 'neon-test-user (expand-file-name "neon-test-user"))
 
-;; Variables
+;; Configuration variables
+
+(defvar neon-test-server "http://somewhere.over-the-rainbow.invalid/"
+  "A WebDAV server's root URL.")
+
+(defvar neon-test-path "/path/nonexistent/too"
+  "A noncollection resource on `neon-test-server'.")
+
+(defvar neon-test-user "gandalf"
+  "A user on `neon-test-server'.")
+
+(defvar neon-test-secret "Speak, friend, and enter."
+  "`neon-test-user's password on `neon-test-server'.")
+
+(defvar neon-test-auth-header
+  (list "Authorization"
+	(concat "Basic "
+		(base64-encode-string
+		 (concat neon-test-user neon-test-secret))))
+  "An HTTP header implementing RFC 2617 basic authentication with user
+`neon-test-user' and password `neon-test-secret', like `neon-test-auth-cb'.
+Currently unused by the test suite.")
+
+(unless (fboundp 'neon-test-auth-cb)
+  (defun neon-test-auth-cb (iggy pop)
+    "Authenticate as `neon-test-user' with password `neon-test-secret'.
+IGGY is a string, the HTTP realm expected to be offered by the server
+  \(currently ignored). 
+POP is an integer, the current count of previous \(failed) attempts \(we give
+  up after 3 failures).
+Returns a list of the values of `neon-test-user' and `neon-test-secret'."
+    ;; IGGY is ignored in this sample callback.
+    ;; We restrict consecutive failures to 3.  neon will try indefinitely, so
+    ;; we must do the restriction.
+    (if (>= pop 3)
+	pop				; hackish way to abort authentication
+      (list neon-test-user neon-test-secret))))
+
+;; Internal variables
 
 (defvar neon-parses nil
   "Stack of recent webdav-xml parse trees computed.")
@@ -75,9 +113,10 @@ Optional AUTH is a boolean indicating whether a authentication callback was
 	  (when body
 	    (neon-set-request-body-buffer   session body))
 	  (let ((response (neon-request-dispatch session)))
+	    ;; when the reader is a buffer, it contains the response
 	    (when (eq reader 'webdav-xml)
-	      (push response neon-parses))
-	    (insert (format "%S" response)))
+	      (push response neon-parses)
+	      (insert (format "%S" response))))
 	  buf)				; normal function return value
       (error
        (warn "neon request %s\nwith conditions: %s\n%s"
