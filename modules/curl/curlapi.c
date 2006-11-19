@@ -55,7 +55,7 @@ static struct earl_transport_implementation curl_transport =
 static struct curl_data *
 allocate_curl_data (void)
 {
-  struct curl_data *data = xmalloc (sizeof (struct curl_data));
+  struct curl_data *data = xmalloc_and_zero (sizeof (struct curl_data));
   data->transport_implementation = &curl_transport;
   return data;
 }

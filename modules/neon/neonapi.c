@@ -180,7 +180,7 @@ static struct earl_transport_implementation neon_transport =
 static struct neon_data *
 allocate_neon_data (void)
 {
-  struct neon_data *data = xmalloc (sizeof (struct neon_data));
+  struct neon_data *data = xmalloc_and_zero (sizeof (struct neon_data));
   data->transport_implementation = &neon_transport;
   return data;
 }
@@ -252,13 +252,25 @@ with lazy initialization of neon-specific session attributes in
     ne_uri u;
     Extbyte *ru = NEW_LISP_STRING_TO_EXTERNAL (url, handle->coding_system);
     if (ne_uri_parse (ru, &u))
-      signal_error (Qio_error, "neon: couldn't parse URL", url);
+      {
+	ne_uri_free (&u);
+	signal_error (Qio_error, "neon couldn't parse URL", url);
+      }
     if (!u.scheme)
-      signal_error (Qio_error, "neon: no scheme in URL", url);
+      {
+	ne_uri_free (&u);
+	signal_error (Qio_error, "no scheme in URL", url);
+      }
     if (!u.host)
-      signal_error (Qio_error, "neon: no host in URL", url);
+      {
+	ne_uri_free (&u);
+	signal_error (Qio_error, "no host in URL", url);
+      }
     if (!u.port && !(u.port = ne_uri_defaultport (u.scheme)))
-      signal_error (Qio_error, "neon: could not determine port for URL", url);
+      {
+	ne_uri_free (&u);
+	signal_error (Qio_error, "could not determine port for URL", url);
+      }
 
     handle->transport_data = (struct earl_transport_data *) allocate_neon_data ();
     NEON_DATA (handle)->session = ne_session_create (u.scheme, u.host, u.port);
@@ -802,13 +814,25 @@ response status and headers are cleared.  Returns SESSION.
       ne_uri u;
       Extbyte *ru = NEW_LISP_STRING_TO_EXTERNAL (url, s->coding_system);
       if (ne_uri_parse (ru, &u))
-	signal_error (Qio_error, "neon couldn't parse URL", url);
+	{
+	  ne_uri_free (&u);
+	  signal_error (Qio_error, "neon couldn't parse URL", url);
+	}
       if (!u.scheme)
-	signal_error (Qio_error, "no scheme in URL", url);
+	{
+	  ne_uri_free (&u);
+	  signal_error (Qio_error, "no scheme in URL", url);
+	}
       if (!u.host)
-	signal_error (Qio_error, "no host in URL", url);
+	{
+	  ne_uri_free (&u);
+	  signal_error (Qio_error, "no host in URL", url);
+	}
       if (!u.port && !(u.port = ne_uri_defaultport (u.scheme)))
-	signal_error (Qio_error, "could not determine port for URL", url);
+	{
+	  ne_uri_free (&u);
+	  signal_error (Qio_error, "could not determine port for URL", url);
+	}
 
       NEON_DATA (s) = allocate_neon_data ();
       NEON_DATA (s)->session = ne_session_create (u.scheme, u.host, u.port);
