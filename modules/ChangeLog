@@ -36,6 +36,25 @@
 
 	* curl/curl_api.h: Change token to comment in #endif.
 
+2006-11-19  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	Small fixes.
+
+	* neon/neon-test.el (neon-request-test): When the reader is a
+	buffer, don't try to insert the buffer object in the buffer.
+
+	* neon/neonapi.c (Fneon_make_session_handle):
+	(Fneon_request_create):
+	Deallocate ne_uri struct on errors.
+
+	* curl/curlapi.c (allocate_curl_data):
+	neon/neonapi.c (allocate_neon_data):
+	Zero curl_data/neon_data struct on allocation.
+
+	* curl/curlapi.c (curl_transport):
+	* neon/neonapi.c (neon_transport):
+	Fix syntax error (missing semicolon).
+
 2006-09-13  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* neon/neon_api.c (Fneon_request_create): Change use of obsolete
