@@ -174,7 +174,7 @@ static void finalize_neon_data (struct earl_transport_data *data);
 
 static struct earl_transport_implementation neon_transport =
   {
-    &finalize_neon_data;
+    &finalize_neon_data
   };
 
 static struct neon_data *

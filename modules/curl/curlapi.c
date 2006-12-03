@@ -49,7 +49,7 @@ static void finalize_curl_data (struct earl_transport_data *data);
 
 static struct earl_transport_implementation curl_transport =
   {
-    &finalize_curl_data;
+    &finalize_curl_data
   };
 
 static struct curl_data *

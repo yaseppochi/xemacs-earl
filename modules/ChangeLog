@@ -50,6 +50,12 @@
 
 	* curl/curl_api.h: Change token to comment in #endif.
 
+2006-12-03  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* curl/curlapi.c (curl_transport):
+	* neon/neonapi.c (neon_transport):
+	Fix syntax error in struct initializations.
+
 2006-11-19  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	Small fixes.
