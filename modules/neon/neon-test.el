@@ -69,9 +69,8 @@ Returns a list of the values of `neon-test-user' and `neon-test-secret'."
 				      &optional accepter body auth)
   (format "*%s%s %s%s%s accept %s*"
 	  (if (eq reader 'webdav-xml) "parsed " "")
-	  (cond ((member method neon-http-methods) "HTTP")
-		((member method neon-webdav-methods) "WebDAV")
-		(t "unknown protocol"))
+	  (let ((protocol (assoc method neon-http-descriptions)))
+	    (if (protocol) (nth 1 protocol) "unknown protocol"))
 	  method
 	  (if auth " w/ auth," "")
 	  (if body " w/ body," "")

@@ -1,3 +1,13 @@
+2006-12-04  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* neon/neon.el (neon-http-descriptions): New variable.
+	* neon/neon.el (neon-http-methods): Obsoleted.
+	* neon/neon.el (neon-webdav-methods): Obsoleted.
+
+	* neon/neon.el (neon-request-buffer-name):
+	* neon/neon-test.el (neon-request-test-buffer-name):
+	Use `neon-http-descriptions'.
+
 2007-05-10  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* neon/neonapi.c:

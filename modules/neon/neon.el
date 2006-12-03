@@ -24,10 +24,32 @@
 
 ;; #### pull generally useful stuff into here from neon-test.el.
 
-;; #### RFC 2518 doesn't make this distinction.  Should we?
+(defconst neon-http-descriptions
+  '(("OPTIONS"	"HTTP/1.1"	"RFC 2616")
+    ("HEAD"	"HTTP/1.1"	"RFC 2616")
+    ("GET"	"HTTP/1.1"	"RFC 2616")
+    ("POST"	"HTTP/1.1"	"RFC 2616")
+    ("PUT"	"HTTP/1.1"	"RFC 2616")
+    ("DELETE"	"HTTP/1.1"	"RFC 2616")
+    ("TRACE"	"HTTP/1.1"	"RFC 2616")
+    ("CONNECT"	"HTTP/1.1"	"RFC 2616")
+    ("MKCOL"	"WebDAV"	"RFC 2518")
+    ("COPY"	"WebDAV"	"RFC 2518")
+    ("MOVE"	"WebDAV"	"RFC 2518")
+    ("PROPFIND"	"WebDAV"	"RFC 2518")
+    ("PROPPATCH"	"WebDAV"	"RFC 2518")
+    ("LOCK"	"WebDAV"	"RFC 2518")
+    ("UNLOCK"	"WebDAV"	"RFC 2518"))
+  "Descriptions of HTTP methods.
+A list of lists of strings.  The first element of each is the name of an HTTP
+method.  The second is the common name of the defining standard, and the third
+is the normative reference.")
+
+;; obsolete
 (defconst neon-http-methods
   '("OPTIONS" "HEAD" "GET" "PUT" "POST" "DELETE" "TRACE"))
 
+;; obsolete
 (defconst neon-webdav-methods
   '("MKCOL" "COPY" "MOVE" "PROPFIND" "PROPPATCH" "LOCK" "UNLOCK"))
 
@@ -117,9 +139,8 @@ The ignored arguments are for compatibility with `neon-simple-request', and
 may be used in a future version."
   (format "*%s%s %s%s%s accept %s*"
 	  (if (eq reader 'webdav-xml) "parsed " "")
-	  (cond ((member method neon-http-methods) "HTTP")
-		((member method neon-webdav-methods) "WebDAV")
-		(t "unknown protocol"))
+	  (let ((protocol (assoc method neon-http-descriptions)))
+	    (if (protocol) (nth 1 protocol) "unknown protocol"))
 	  method
 	  (if auth " w/ auth," "")
 	  (if body " w/ body," "")
