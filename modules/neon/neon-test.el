@@ -36,7 +36,7 @@
   (list "Authorization"
 	(concat "Basic "
 		(base64-encode-string
-		 (concat neon-test-user neon-test-secret))))
+		 (concat neon-test-user ":" neon-test-secret))))
   "An HTTP header implementing RFC 2617 basic authentication with user
 `neon-test-user' and password `neon-test-secret', like `neon-test-auth-cb'.
 Currently unused by the test suite.")
