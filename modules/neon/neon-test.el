@@ -70,7 +70,7 @@ Returns a list of the values of `neon-test-user' and `neon-test-secret'."
   (format "*%s%s %s%s%s accept %s*"
 	  (if (eq reader 'webdav-xml) "parsed " "")
 	  (let ((protocol (assoc method neon-http-descriptions)))
-	    (if (protocol) (nth 1 protocol) "unknown protocol"))
+	    (if protocol (nth 1 protocol) "unknown protocol"))
 	  method
 	  (if auth " w/ auth," "")
 	  (if body " w/ body," "")
