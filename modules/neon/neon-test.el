@@ -55,18 +55,30 @@
 
 ;;; Code
 
+;; #### This doesn't seem to work in place.
 (unless (require 'neon "neon" 'no-error)
   (require 'neon "neon/neon"))
 
-(require 'neon-test-user (expand-file-name "neon-test-user"))
+;; This file could probably live in site-packages?
+;; #### There needs to be a general way to deal with site-specific tests
+;; like this.
+;; #### why not simply
+;; (require 'neon-test-user (expand-file-name "neon-test-user"))
+(let ((test-configuration (expand-file-name "../../neon-test-user.el")))
+  (when (file-readable-p test-configuration)
+    (load-file test-configuration)))
 
 ;; Configuration variables
 
-(defvar neon-test-server "http://somewhere.over-the-rainbow.invalid/"
+(defvar neon-test-server "http://somewhere.over.the.rainbow.invalid/"
   "A WebDAV server's root URL.")
 
-(defvar neon-test-path "/path/nonexistent/too"
-  "A noncollection resource on `neon-test-server'.")
+(defvar neon-test-path-public "/"
+  "A public resource on `neon-test-server'.
+Default is \"/\", which should normally suffice.")
+
+(defvar neon-test-path-private "/path/nonexistent/too"
+  "A private (DAV) noncollection resource on `neon-test-server'.")
 
 (defvar neon-test-user "gandalf"
   "A user on `neon-test-server'.")
@@ -74,29 +86,31 @@
 (defvar neon-test-secret "Speak, friend, and enter."
   "`neon-test-user's password on `neon-test-server'.")
 
+;; Default predefined Basic Authorization header.
+;; May be overridden in neon-test-user.el, but it's currently unused.
 (defvar neon-test-auth-header
   (list "Authorization"
 	(concat "Basic "
 		(base64-encode-string
 		 (concat neon-test-user ":" neon-test-secret))))
   "An HTTP header implementing RFC 2617 basic authentication with user
-`neon-test-user' and password `neon-test-secret', like `neon-test-auth-cb'.
-Currently unused by the test suite.")
+`neon-test-user' and password `neon-test-secret', like `neon-test-auth-cb'.")
 
-(unless (fboundp 'neon-test-auth-cb)
-  (defun neon-test-auth-cb (iggy pop)
-    "Authenticate as `neon-test-user' with password `neon-test-secret'.
+;; Default authorization callback.
+;; May be overridden in neon-test-user.el.
+(defun-when-void neon-test-auth-cb (iggy pop)
+  "Authenticate as `neon-test-user' with password `neon-test-secret'.
 IGGY is a string, the HTTP realm expected to be offered by the server
   \(currently ignored). 
 POP is an integer, the current count of previous \(failed) attempts \(we give
   up after 3 failures).
 Returns a cons of the values of `neon-test-user' and `neon-test-secret'."
-    ;; IGGY is ignored in this sample callback.
-    ;; We restrict consecutive failures to 3.  neon will try indefinitely, so
-    ;; we must do the restriction.
-    (if (>= pop 3)
-	pop				; hackish way to abort authentication
-      (cons neon-test-user neon-test-secret))))
+  ;; IGGY is ignored in this sample callback.
+  ;; We restrict consecutive failures to 3.  neon will try indefinitely, so
+  ;; we must do the restriction.
+  (if (>= pop 3)
+      pop			; hackish way to abort authentication
+    (cons neon-test-user neon-test-secret))))
 
 ;; Internal variables
 
@@ -172,11 +186,14 @@ Optional AUTH is a boolean indicating whether a authentication callback was
 
 ;; (defun neon-request-test (session path method reader
 ;;			     &optional accepter body auth)
-(neon-request-test mh "/" "OPTIONS"  'raw 'accept-always nil nil)
-(neon-request-test mh neon-test-path "OPTIONS"  'raw 'accept-always nil nil)
+(neon-request-test mh neon-test-path-public "OPTIONS"
+		   'raw 'accept-always nil nil)
+(neon-request-test mh neon-test-path-private "OPTIONS"
+		   'raw 'accept-always nil nil)
 (save-excursion
-  (set-buffer (neon-request-test-buffer-name
-	           mh "/" "OPTIONS"  'raw 'accept-always nil nil))
+  (set-buffer
+   (neon-request-test-buffer-name mh neon-test-path-public "OPTIONS"
+				  'raw 'accept-always nil nil))
   (goto-char (point-max))
   (insert "\n")
   (let ((response-headers (plist-get (object-plist mh)
@@ -186,8 +203,9 @@ Optional AUTH is a boolean indicating whether a authentication callback was
 		      (car response-headers) (cadr response-headers)))
       (setq response-headers (cddr response-headers)))))
 (save-excursion
-  (set-buffer (neon-request-test-buffer-name
-	           mh neon-test-path "OPTIONS"  'raw 'accept-always nil nil))
+  (set-buffer
+   (neon-request-test-buffer-name mh neon-test-path-private "OPTIONS"
+				  'raw 'accept-always nil nil))
   (goto-char (point-max))
   (insert "\n")
   (let ((response-headers (plist-get (object-plist mh)
@@ -196,20 +214,25 @@ Optional AUTH is a boolean indicating whether a authentication callback was
       (insert (format "%S %S\n"
 		      (car response-headers) (cadr response-headers)))
       (setq response-headers (cddr response-headers)))))
-(neon-request-test mh neon-test-path "HEAD"     'raw 'accept-always nil nil)
-(neon-request-test mh "/" "GET"      'raw 'accept-always nil nil)
-(neon-request-test mh neon-test-path "GET"      'raw 'accept-always nil nil)
+(neon-request-test mh neon-test-path-private "HEAD"
+		   'raw        'accept-always nil nil)
+(neon-request-test mh neon-test-path-public  "GET"
+		   'raw        'accept-always nil nil)
+(neon-request-test mh neon-test-path-private "GET"
+		   'raw        'accept-always nil nil)
 
 ;; set authentication for the WebDAV tests
-(neon-session-set-auth mh #'test-auth-cb nil)
-(neon-request-test mh test-path "PROPFIND" 'raw 'accept-always nil nil)
-(neon-request-test mh test-path "PROPFIND"
+(neon-session-set-auth mh #'neon-test-auth-cb nil)
+
+(neon-request-test mh neon-test-path-private "PROPFIND"
+		   'raw        'accept-always nil nil)
+(neon-request-test mh neon-test-path-private "PROPFIND"
 		   'raw        'accept-always webdav-sourceprop-xml nil)
-(neon-request-test mh test-path "PROPFIND"
+(neon-request-test mh neon-test-path-private "PROPFIND"
 		   'webdav-xml 'accept-always webdav-allprop-xml    nil)
-(neon-request-test mh test-path "PROPFIND"
+(neon-request-test mh neon-test-path-private "PROPFIND"
 		   'webdav-xml 'accept-always webdav-sourceprop-xml nil)
-(neon-request-test mh test-path "PROPFIND"
+(neon-request-test mh neon-test-path-private "PROPFIND"
 		   'webdav-xml 'accept-2xx    webdav-allprop-xml    nil)
 
 ;; For easy access to the various results
@@ -241,6 +264,8 @@ Optional AUTH is a boolean indicating whether a authentication callback was
 ;; callbacks may return non-zero to abort the parse or zero to accept the
 ;; content.  We simply return success (1 for the start callback, 0 for the
 ;; others).
+
+(defvar state nil "State for neon WebDEV parser emulator.")
 
 (defun start-cb (state ns nm ap)
   (let ((current (aref state 1)))
