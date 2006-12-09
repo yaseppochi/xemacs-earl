@@ -4,12 +4,54 @@
 
 ;;; Commentary
 
-;; To configure, edit the file "neon-test-user.el".  A sample implementation
-;; is provided as "neon-test-sample-user.el".  Note that you must `provide'
-;; `neon-test-user', since the file is loaded via `require'.
+;; To configure, create a file named "neon-test-user.el", in it set the values
+;; of `neon-test-server', `neon-test-path-public', `neon-test-path-private',
+;; `neon-test-user', and `neon-test-secret'.  Optionally, define a function
+;; `neon-test-auth-cb'.  We also provide a variable to define an authenti-
+;; cation header, which is list of two strings (the tag and the contents).
+;; A sample implementation is provided as "neon-test-sample-user.el".
+;; Note that you must `provide' `neon-test-user', since the file is loaded
+;; via `require'.
 
 ;; This file also contains a LISP emulation of the algorithms used in the
 ;; callbacks in the C code.
+
+;; Troubleshooting
+
+;; Configuring any webserver is non-trivial; configuring DAV is painful.
+;; Here are some based on personal experience (and hints only! this is a
+;; troubleshooting checklist, not a DAV configuration tutorial).  See your
+;; webserver's documentation for details.
+
+;; 1. You should have a webserver that listens on port 80 (as almost all do
+;;    by default).  The server's domain or IP address is configured in this
+;;    test suite by setting `neon-test-server' to an appropriate string.
+;; 2. This webserver should have a publicly available resource.  On most,
+;;    the index of the DocumentRoot will do.  To configure the test suite,
+;;    set `neon-test-path-public' to this path (e.g., "/").
+;; 3. The webserver should have DAV configured.  For Apache with mod_dav, the
+;;    LoadModule and AddModule directories should be specified.  (This is
+;;    usually done by uncommenting the directives in httpd.conf or similar.)
+;; 4. DAV should be turned on for a "private" resource (usually a directory).
+;;    In Apache this is done with the Dav On directive in the scope of a
+;;    <Directory> or <Location> element.  "/DAV/" will be used in examples.
+;;    To configure the test suite, set `neon-test-path-private' to "/DAV/",
+;;    and `neon-test-user' and `neon-test-secret' to a user and password
+;;    granted access to "/DAV" by HTTP Basic Authentication.
+;; 5. In Apache, DAV requires a lock database, which is an existing directory
+;;    configured with the DAVLockDB directive.  It must be writable by Apache.
+;;    It should be outside of the webserver's document space.
+;; 6. DAV requires provision for authentication.  Currently this test module
+;;    presumes HTTP Basic Authentication.  This is implemented in Apache by
+;;    mod_auth.  Use the LoadModule and AddModule directives.
+;; 7. Basic Authentication needs to be configured for <Location /DAV/>.  Use
+;;    the AuthType Basic directive to turn on Basic Authentication, optionally
+;;    a AuthName directive to set the authentication realm, the AuthUserFile
+;;    directive to configure a password file (which should never be in the
+;;    webserver's document space), optionally an AuthGroupFile, and a Require
+;;    directive to specify the principal who must be authenticated to access
+;;    the documents.  For Apache, you can create the AuthUserFile with the
+;;    htpasswd utility.
 
 ;;; Code
 
@@ -48,13 +90,13 @@ IGGY is a string, the HTTP realm expected to be offered by the server
   \(currently ignored). 
 POP is an integer, the current count of previous \(failed) attempts \(we give
   up after 3 failures).
-Returns a list of the values of `neon-test-user' and `neon-test-secret'."
+Returns a cons of the values of `neon-test-user' and `neon-test-secret'."
     ;; IGGY is ignored in this sample callback.
     ;; We restrict consecutive failures to 3.  neon will try indefinitely, so
     ;; we must do the restriction.
     (if (>= pop 3)
 	pop				; hackish way to abort authentication
-      (list neon-test-user neon-test-secret))))
+      (cons neon-test-user neon-test-secret))))
 
 ;; Internal variables
 
