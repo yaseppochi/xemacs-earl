@@ -172,10 +172,11 @@ Optional AUTH is a boolean indicating whether a authentication callback was
 
 ;; (defun neon-request-test (session path method reader
 ;;			     &optional accepter body auth)
-(neon-request-test mh test-path "OPTIONS"  'raw 'accept-always nil nil)
+(neon-request-test mh "/" "OPTIONS"  'raw 'accept-always nil nil)
+(neon-request-test mh neon-test-path "OPTIONS"  'raw 'accept-always nil nil)
 (save-excursion
   (set-buffer (neon-request-test-buffer-name
-	           mh test-path "OPTIONS"  'raw 'accept-always nil nil))
+	           mh "/" "OPTIONS"  'raw 'accept-always nil nil))
   (goto-char (point-max))
   (insert "\n")
   (let ((response-headers (plist-get (object-plist mh)
@@ -184,8 +185,20 @@ Optional AUTH is a boolean indicating whether a authentication callback was
       (insert (format "%S %S\n"
 		      (car response-headers) (cadr response-headers)))
       (setq response-headers (cddr response-headers)))))
-(neon-request-test mh test-path "HEAD"     'raw 'accept-always nil nil)
-(neon-request-test mh test-path "GET"      'raw 'accept-always nil nil)
+(save-excursion
+  (set-buffer (neon-request-test-buffer-name
+	           mh neon-test-path "OPTIONS"  'raw 'accept-always nil nil))
+  (goto-char (point-max))
+  (insert "\n")
+  (let ((response-headers (plist-get (object-plist mh)
+				     'last-response-headers)))
+    (while response-headers
+      (insert (format "%S %S\n"
+		      (car response-headers) (cadr response-headers)))
+      (setq response-headers (cddr response-headers)))))
+(neon-request-test mh neon-test-path "HEAD"     'raw 'accept-always nil nil)
+(neon-request-test mh "/" "GET"      'raw 'accept-always nil nil)
+(neon-request-test mh neon-test-path "GET"      'raw 'accept-always nil nil)
 
 ;; set authentication for the WebDAV tests
 (neon-session-set-auth mh #'test-auth-cb nil)
