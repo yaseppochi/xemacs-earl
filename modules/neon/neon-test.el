@@ -4,14 +4,15 @@
 
 ;;; Commentary
 
-;; To configure, create a file named "neon-test-user.el", in it set the values
-;; of `neon-test-server', `neon-test-path-public', `neon-test-path-private',
-;; `neon-test-user', and `neon-test-secret'.  Optionally, define a function
-;; `neon-test-auth-cb'.  We also provide a variable to define an authenti-
-;; cation header, which is list of two strings (the tag and the contents).
+;; To configure, create a file named "neon-test-user.el" in the build root.
+
+;; In it set the values of `neon-test-server', `neon-test-path-public',
+;; `neon-test-path-private', `neon-test-user', and `neon-test-secret'.
+;; Optionally, define a function `neon-test-auth-cb'.  (This file provides
+;; a default definition which should be sufficient for testing.)
+;; We also provide a variable to define an authentication header, which is
+;; list of two strings (the tag and the contents).
 ;; A sample implementation is provided as "neon-test-sample-user.el".
-;; Note that you must `provide' `neon-test-user', since the file is loaded
-;; via `require'.
 
 ;; This file also contains a LISP emulation of the algorithms used in the
 ;; callbacks in the C code.
@@ -46,7 +47,7 @@
 ;;    mod_auth.  Use the LoadModule and AddModule directives.
 ;; 7. Basic Authentication needs to be configured for <Location /DAV/>.  Use
 ;;    the AuthType Basic directive to turn on Basic Authentication, optionally
-;;    a AuthName directive to set the authentication realm, the AuthUserFile
+;;    an AuthName directive to set the authentication realm, the AuthUserFile
 ;;    directive to configure a password file (which should never be in the
 ;;    webserver's document space), optionally an AuthGroupFile, and a Require
 ;;    directive to specify the principal who must be authenticated to access
@@ -110,7 +111,7 @@ Returns a cons of the values of `neon-test-user' and `neon-test-secret'."
   ;; we must do the restriction.
   (if (>= pop 3)
       pop			; hackish way to abort authentication
-    (cons neon-test-user neon-test-secret))))
+    (cons neon-test-user neon-test-secret)))
 
 ;; Internal variables
 
@@ -181,59 +182,35 @@ Optional AUTH is a boolean indicating whether a authentication callback was
 
 ;; The test requests
 
-;; initialize a session
-(setq mh (neon-make-session-handle test-server))
+(let ((mh (neon-make-session-handle neon-test-server)))
+  (save-excursion
+    (set-buffer
+     (neon-request-test mh neon-test-path-public "OPTIONS"
+			'raw 'accept-always nil nil))
+    (goto-char (point-max))
+    (insert "\n")
+    (mapc (lambda (response-headers)
+	    (insert (format "%S %S\n"
+			    (car response-headers) (cadr response-headers))))
+	  (plist-get (object-plist mh) 'last-response-headers)))
+  (neon-request-test mh neon-test-path-public "HEAD"
+		     'raw        'accept-always nil nil)
+  (neon-request-test mh neon-test-path-public "GET"
+		     'raw        'accept-always nil nil)
 
-;; (defun neon-request-test (session path method reader
-;;			     &optional accepter body auth)
-(neon-request-test mh neon-test-path-public "OPTIONS"
-		   'raw 'accept-always nil nil)
-(neon-request-test mh neon-test-path-private "OPTIONS"
-		   'raw 'accept-always nil nil)
-(save-excursion
-  (set-buffer
-   (neon-request-test-buffer-name mh neon-test-path-public "OPTIONS"
-				  'raw 'accept-always nil nil))
-  (goto-char (point-max))
-  (insert "\n")
-  (let ((response-headers (plist-get (object-plist mh)
-				     'last-response-headers)))
-    (while response-headers
-      (insert (format "%S %S\n"
-		      (car response-headers) (cadr response-headers)))
-      (setq response-headers (cddr response-headers)))))
-(save-excursion
-  (set-buffer
-   (neon-request-test-buffer-name mh neon-test-path-private "OPTIONS"
-				  'raw 'accept-always nil nil))
-  (goto-char (point-max))
-  (insert "\n")
-  (let ((response-headers (plist-get (object-plist mh)
-				     'last-response-headers)))
-    (while response-headers
-      (insert (format "%S %S\n"
-		      (car response-headers) (cadr response-headers)))
-      (setq response-headers (cddr response-headers)))))
-(neon-request-test mh neon-test-path-private "HEAD"
-		   'raw        'accept-always nil nil)
-(neon-request-test mh neon-test-path-public  "GET"
-		   'raw        'accept-always nil nil)
-(neon-request-test mh neon-test-path-private "GET"
-		   'raw        'accept-always nil nil)
+  ;; set authentication for the WebDAV tests
+  (neon-session-set-auth mh #'neon-test-auth-cb nil)
 
-;; set authentication for the WebDAV tests
-(neon-session-set-auth mh #'neon-test-auth-cb nil)
-
-(neon-request-test mh neon-test-path-private "PROPFIND"
-		   'raw        'accept-always nil nil)
-(neon-request-test mh neon-test-path-private "PROPFIND"
-		   'raw        'accept-always webdav-sourceprop-xml nil)
-(neon-request-test mh neon-test-path-private "PROPFIND"
-		   'webdav-xml 'accept-always webdav-allprop-xml    nil)
-(neon-request-test mh neon-test-path-private "PROPFIND"
-		   'webdav-xml 'accept-always webdav-sourceprop-xml nil)
-(neon-request-test mh neon-test-path-private "PROPFIND"
-		   'webdav-xml 'accept-2xx    webdav-allprop-xml    nil)
+  (neon-request-test mh neon-test-path-private "PROPFIND"
+		     'raw        'accept-always nil nil)
+  (neon-request-test mh neon-test-path-private "PROPFIND"
+		     'raw        'accept-always webdav-sourceprop-xml nil)
+  (neon-request-test mh neon-test-path-private "PROPFIND"
+		     'webdav-xml 'accept-always webdav-allprop-xml    nil)
+  (neon-request-test mh neon-test-path-private "PROPFIND"
+		     'webdav-xml 'accept-always webdav-sourceprop-xml nil)
+  (neon-request-test mh neon-test-path-private "PROPFIND"
+		     'webdav-xml 'accept-2xx    webdav-allprop-xml    nil))
 
 ;; For easy access to the various results
 (list-buffers)

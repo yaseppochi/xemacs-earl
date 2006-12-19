@@ -1,3 +1,7 @@
+2006-12-20  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* neon/neon-test.el: Various minor improvements.
+
 2006-12-04  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* neon/neon.el (neon-http-descriptions): New variable.
