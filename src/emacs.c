@@ -1483,7 +1483,8 @@ main_1 (int argc, Wexttext **argv, Wexttext **UNUSED (envp), int restart)
 #ifdef HAVE_DRAGNDROP
       syms_of_dragdrop ();
 #endif
-#if defined(HAVE_EARL) && !defined(HAVE_SHLIB)
+      /* #### We'd like this to depend on !defined(HAVE_SHLIB) */
+#if defined(HAVE_EARL)
       syms_of_earl();
 #endif
       syms_of_event_stream ();
@@ -2042,7 +2043,7 @@ main_1 (int argc, Wexttext **argv, Wexttext **UNUSED (envp), int restart)
 #ifdef HAVE_DRAGNDROP
       vars_of_dragdrop ();
 #endif
-      /* This will eventually depend on !defined(HAVE_SHLIB)
+      /* This will eventually depend on !defined(HAVE_SHLIB) */
 #ifdef HAVE_EARL
       vars_of_earl();
 #endif

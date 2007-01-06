@@ -86,14 +86,22 @@ Boston, MA 02111-1307, USA.  */
 #include "../modules/postgresql/postgresql.h"
 #endif
 
+/* #### Currently EARL is built-in regardless of HAVE_SHLIB. */
+#if defined (HAVE_EARL)
+#include "../modules/earl/earl.h"
+#endif
+
+/* We can't ask for !defined (HAVE_SHLIB).  See HAVE_LDAP, above. */
 #if defined (HAVE_CURL)
 #include "../modules/curl/curl_api.h"
 #endif
 
+/* We can't ask for !defined (HAVE_SHLIB).  See HAVE_LDAP, above. */
 #if defined (HAVE_NEON)
 #include "../modules/neon/neon_api.h"
 #endif
 
+/* We can't ask for !defined (HAVE_SHLIB).  See HAVE_LDAP, above. */
 #if defined (HAVE_GIT)
 #include "../modules/git/git_api.h"
 #endif

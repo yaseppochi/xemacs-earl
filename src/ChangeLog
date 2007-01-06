@@ -1,3 +1,10 @@
+2007-01-06  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* symsinit.h: Prototype {syms,vars}_of_{earl,curl,neon}.
+
+	* emacs.c (main_1): Terminate comment at call to vars_of_earl.
+	(main_1): Must call syms_of_earl even if HAVE_SHLIB.
+
 2006-09-12  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* Makefile.in.in: .c.o rule needs to use -o so internal module builds work.
