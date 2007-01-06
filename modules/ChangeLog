@@ -1,3 +1,7 @@
+2007-01-06  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* curl/curl_api.h: Change token to comment in #endif.
+
 2006-09-13  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* neon/neon_api.c (Fneon_request_create): Change use of obsolete

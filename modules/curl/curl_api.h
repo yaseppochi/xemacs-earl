@@ -55,4 +55,4 @@ DECLARE_LRECORD (curl_data, Lisp_Curl_Data);
 
 #define CURL_DATA(handle) ((struct curl_data *) (handle->transport_data))
 
-#endif include_CURL_API_H
+#endif /* include_CURL_API_H */

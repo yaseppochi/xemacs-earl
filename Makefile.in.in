@@ -317,9 +317,9 @@ modules/sample modules/ldap modules/zlib modules/base64: lib-src
 modules/postgresql modules/canna: lib-src
 modules/git modules/curl modules/neon modules/earl: lib-src
 
-# EARL currently is always built-in if neon or curl are configured.
-# Maybe this could be done in the earl module?
-# modules/neon: modules/earl
+## EARL currently is always built-in if neon or curl are configured.
+## Maybe this could be done in the earl module?
+## modules/neon: modules/earl
 
 Makefile: ${srcdir}/Makefile.in.in config.status
 	./config.status
