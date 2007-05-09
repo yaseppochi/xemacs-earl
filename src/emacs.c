@@ -1456,9 +1456,6 @@ main_1 (int argc, Wexttext **argv, Wexttext **UNUSED (envp), int restart)
       syms_of_cmdloop ();
       syms_of_cmds ();
       syms_of_console ();
-#if defined(HAVE_CURL) && !defined(HAVE_SHLIB)
-      syms_of_curl();
-#endif
       syms_of_data ();
 #ifdef DEBUG_XEMACS
       syms_of_debug ();
@@ -1486,6 +1483,14 @@ main_1 (int argc, Wexttext **argv, Wexttext **UNUSED (envp), int restart)
       /* #### We'd like this to depend on !defined(HAVE_SHLIB) */
 #if defined(HAVE_EARL)
       syms_of_earl();
+#endif
+#if !defined(HAVE_SHLIB)
+# if defined(HAVE_CURL)
+      syms_of_curlapi();
+# endif
+# if defined(HAVE_NEON)
+      syms_of_neonapi();
+# endif
 #endif
       syms_of_event_stream ();
       syms_of_events ();
@@ -1524,9 +1529,6 @@ main_1 (int argc, Wexttext **argv, Wexttext **UNUSED (envp), int restart)
       syms_of_minibuf ();
 #ifdef HAVE_SHLIB
       syms_of_module ();
-#endif
-#if defined(HAVE_NEON) && !defined(HAVE_SHLIB)
-      syms_of_neon();
 #endif
 #ifdef WITH_NUMBER_TYPES
       syms_of_number ();
@@ -2049,10 +2051,10 @@ main_1 (int argc, Wexttext **argv, Wexttext **UNUSED (envp), int restart)
 #endif
 #ifndef HAVE_SHLIB
 # ifdef HAVE_CURL
-      vars_of_curl();
+      vars_of_curlapi();
 # endif
 # ifdef HAVE_NEON
-      vars_of_neon();
+      vars_of_neonapi();
 # endif
 #endif
       vars_of_editfns ();

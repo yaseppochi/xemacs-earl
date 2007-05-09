@@ -42,7 +42,7 @@
    1246:  Use eistrings here?
    1247:  MEMORY LEAK!!
    1292:  Default is?
-   1800:  These aren't used but could be useful, see curl_api.
+   1800:  These aren't used but could be useful, see curlapi.
    1832:  Anything to do here?  Nothing interesting is documented.
    1849:  Anything to do here?  Nothing interesting is documented.
 */
@@ -1238,7 +1238,7 @@ neon_prepare_http_status (ne_request *neon)
 static int
 neon_write_lstream (void *stream, const char *data, size_t count)
 {
-  /* #### Gotta be a better way!  Cf. similar code in curl_api.c. */
+  /* #### Gotta be a better way!  Cf. similar code in curlapi.c. */
   Lisp_Object temp;
   XPNTRVAL (temp) = (EMACS_UINT) stream;
   Lstream *s = XLSTREAM (temp);
@@ -1531,7 +1531,7 @@ vars_of_neonapi ()
 
   Fprovide (Qneonapi);
 
-  /* #### These aren't used but could be useful, see curl_api. */
+  /* #### These aren't used but could be useful, see curlapi. */
 #if 0
   DEFVAR_LISP ("neon-option-hash-table", &Vneon_option_hash_table /*
 Table of options available for `neon-easy-setopt'.
