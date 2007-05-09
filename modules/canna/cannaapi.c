@@ -162,6 +162,8 @@ Boston, MA 02111-1307, USA.  */
 #include "file-coding.h"
 
 #ifdef CANNA2
+/* iroha (Canna v1) support removed as of cannaapi.c r1.4.
+   #### Is the IROHA_BC #define needed? */
 #define IROHA_BC
 #define CANNA_NEW_WCHAR_AWARE
 #include "canna/jrkanji.h"
@@ -1046,7 +1048,7 @@ Lisp_Object VCANNA; /* by MORIOKA Tomohiko <morioka@jaist.ac.jp>
 
 #if 0
 void
-modules_of_canna_api (void)
+modules_of_cannaapi (void)
 {
   /*
    * This function isn't actually required as we will not be loading
@@ -1057,7 +1059,7 @@ modules_of_canna_api (void)
 #endif
 
 void
-syms_of_canna_api (void)
+syms_of_cannaapi (void)
 {
   DEFSUBR (Fcanna_key_proc);
   DEFSUBR (Fcanna_initialize);
@@ -1082,7 +1084,7 @@ syms_of_canna_api (void)
 }
 
 void
-vars_of_canna_api (void)
+vars_of_cannaapi (void)
 {
   DEFVAR_LISP ("CANNA", &VCANNA);		/* hir@nec, 1992.5.21 */
   VCANNA = Qt;					/* hir@nec, 1992.5.21 */
@@ -1811,9 +1813,9 @@ For canna
 
 #if 0
 #ifdef HAVE_SHLIB
-void unload_canna_api (void);
+void unload_cannaapi (void);
 void
-unload_canna_api (void)
+unload_cannaapi (void)
 {
   /* We don't need to do anything here in the sample case.  However, if you
      create any new types with INIT_LRECORD_IMPLEMENTATION (sample_type), then

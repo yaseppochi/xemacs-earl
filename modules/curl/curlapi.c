@@ -24,14 +24,14 @@
 #include "lstream.h"
 #include "elhash.h"
 
-#include "curl_api.h"		/* include <curl/curl.h> and "earl.h" */
+#include "curlapi.h"		/* include <curl/curl.h> and "earl.h" */
 
 /************************************************************************/
 /*			   Module-specific stuff			*/
 /************************************************************************/
 
 /* Local references to Lisp symbols */
-static Lisp_Object Qcurl_api, Qcurl,
+static Lisp_Object Qcurlapi, Qcurl,
   Qlong, Qfunctionpoint, Qobjectpoint, Qoff_t, Qdouble;
 
 static Lisp_Object Vcurl_option_hash_table, Vcurl_info_hash_table;
@@ -217,12 +217,12 @@ is corrupt.
   else if (EQ (opttype, Qfunctionpoint))
     {
       index += CURLOPTTYPE_FUNCTIONPOINT;  /* CURLoptions encode type */
-      UNIMPLEMENTED ("curl_api function pointer options");
+      UNIMPLEMENTED ("curlapi function pointer options");
     }
   else if (EQ (opttype, Qoff_t))
     {
       index += CURLOPTTYPE_OFF_T;  /* CURLoptions encode type */
-      UNIMPLEMENTED ("curl_api large file offset options");
+      UNIMPLEMENTED ("curlapi large file offset options");
     }
   else
     {
@@ -343,7 +343,7 @@ String returns are encoded with the `binary' coding system.
     }
   else if (EQ (atttype, Qlist))
     {
-      UNIMPLEMENTED ("curl_api slist attributes");
+      UNIMPLEMENTED ("curlapi slist attributes");
     }
   else
     {
@@ -385,7 +385,7 @@ String returns are encoded with the `binary' coding system.
 
 #if 0
 void
-modules_of_curl_api ()
+modules_of_curlapi ()
 {
   /*
    * This function isn't actually required as we will not be loading
@@ -398,7 +398,7 @@ modules_of_curl_api ()
 #endif
 
 void
-syms_of_curl_api ()
+syms_of_curlapi ()
 {
 
   /* cURL-specific functions. */
@@ -408,7 +408,7 @@ syms_of_curl_api ()
   DEFSUBR (Fcurl_easy_getinfo);
 
   /* cURL-specific symbols. */
-  DEFSYMBOL (Qcurl_api);	/* feature symbol */
+  DEFSYMBOL (Qcurlapi);	/* feature symbol */
   DEFSYMBOL (Qcurl);
   DEFSYMBOL (Qlong);
   DEFSYMBOL (Qfunctionpoint);
@@ -419,10 +419,10 @@ syms_of_curl_api ()
 }
 
 void
-vars_of_curl_api ()
+vars_of_curlapi ()
 {
 
-  Fprovide (Qcurl_api);
+  Fprovide (Qcurlapi);
 
   DEFVAR_LISP ("curl-option-hash-table", &Vcurl_option_hash_table /*
 Table of options available for `curl-easy-setopt'.
@@ -457,7 +457,7 @@ corresponding to each key.
      `make-curl-handle'. */
   if (curl_global_init (CURL_GLOBAL_XEMACS))
     {
-      /* unload_curl_api (); */ 	/* #### can we do this? */
+      /* unload_curlapi (); */ 	/* #### can we do this? */
       signal_error (Qio_error, "libcurl initialization failed", Qunbound);
     }
 #endif
@@ -465,7 +465,7 @@ corresponding to each key.
 
 #ifdef HAVE_SHLIB
 void
-unload_curl_api ()
+unload_curlapi ()
 {
   /* If we create any new types by INIT_LRECORD_IMPLEMENTATION (sample_type),
      then UNDEF_LRECORD_IMPLEMENTATION (sample_type) must appear here.  Also,
@@ -476,7 +476,7 @@ unload_curl_api ()
      #### Handle return code? Nothing interesting is documented. */
   (void) curl_global_cleanup ();
 
-  unstaticpro_nodump (&Qcurl_api);
+  unstaticpro_nodump (&Qcurlapi);
   unstaticpro_nodump (&Qcurl);
   unstaticpro_nodump (&Qlong);
   unstaticpro_nodump (&Qfunctionpoint);

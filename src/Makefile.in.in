@@ -200,7 +200,7 @@ mule_objs=mule-ccl.o mule-charset.o mule-coding.o
 #endif
 
 #if defined(HAVE_CANNA) && !defined(HAVE_SHLIB)
-mule_canna_objs=$(BLDMODULES)/canna/canna_api.o
+mule_canna_objs=$(BLDMODULES)/canna/cannaapi.o
 #endif
 
 #ifdef HAVE_WNN
@@ -225,15 +225,15 @@ earl_objs=$(BLDMODULES)/earl/earl.o
 #endif
 
 #if defined(HAVE_CURL) && !defined(HAVE_SHLIB)
-curl_objs=$(BLDMODULES)/curl/curl_api.o
+curl_objs=$(BLDMODULES)/curl/curlapi.o
 #endif
 
 #if defined(HAVE_NEON) && !defined(HAVE_SHLIB)
-neon_objs=$(BLDMODULES)/neon/neon_api.o
+neon_objs=$(BLDMODULES)/neon/neonapi.o
 #endif
 
 #if defined(HAVE_GIT) && !defined(HAVE_SHLIB)
-git_objs=$(BLDMODULES)/git/git_api.o
+git_objs=$(BLDMODULES)/git/gitapi.o
 #endif
 
 #ifdef HAVE_WIN32_PROCESSES

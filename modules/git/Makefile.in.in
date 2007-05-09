@@ -26,7 +26,7 @@
 ## source tree.
 
 ### Specialize this part for your module
-MODNAME=git_api
+MODNAME= gitapi
 MODVER=0.0.1
 MODTITLE="Interface to libgit for XEmacs"
 LDFLAGS=@LDFLAGS@ @git_libs@

@@ -1,5 +1,5 @@
-#ifndef include_CURL_API_H
-#define include_CURL_API_H
+#ifndef include_CURLAPI_H
+#define include_CURLAPI_H
 /*
  * Lisp interface to libcurl for XEmacs.
  *
@@ -55,4 +55,4 @@ DECLARE_LRECORD (curl_data, Lisp_Curl_Data);
 
 #define CURL_DATA(handle) ((struct curl_data *) (handle->transport_data))
 
-#endif /* include_CURL_API_H */
+#endif /* include_CURLAPI_H */

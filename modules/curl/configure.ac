@@ -3,7 +3,7 @@
 AC_INIT([libcurl API module], [1.0], [xemacs-beta@xemacs.org])
 AC_PREREQ(2.53)
 AC_REVISION($Revision: 1.1 $)
-AC_COPYRIGHT([Configuration script for the curl_api module.
+AC_COPYRIGHT([Configuration script for the curlapi module.
 Copyright (C) 2002 Jerry James.
 Copyright (C) 2005 Free Software Foundation, Inc.
 
@@ -24,7 +24,7 @@ along with XEmacs; see the file COPYING.  If not, write to the Free
 Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 02111-1307, USA.])
 
-AC_CONFIG_SRCDIR([curl_api.c])
+AC_CONFIG_SRCDIR([curlapi.c])
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_SUBST(CFLAGS)

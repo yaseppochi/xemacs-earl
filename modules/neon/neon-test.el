@@ -1,4 +1,4 @@
-;;; neon-test.el --- ad hoc test suite for the neon_api ELL module.
+;;; neon-test.el --- ad hoc test suite for the neonapi ELL module.
 
 ;; Copyright (C) 2006  Stephen J. Turnbull
 

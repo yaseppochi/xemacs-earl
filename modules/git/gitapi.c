@@ -44,7 +44,7 @@
  */
 
 void
-modules_of_git_api ()
+modules_of_ gitapi ()
 {
   /*
    * This function isn't actually required as we will not be loading
@@ -54,13 +54,13 @@ modules_of_git_api ()
 }
 
 void
-syms_of_git_api ()
+syms_of_ gitapi ()
 {
   DEFSUBR(Fsample_function);
 }
 
 void
-vars_of_git_api ()
+vars_of_ gitapi ()
 {
   DEFVAR_LISP ("sample-string", &Vsample_string /*
 This is a sample string, declared in a dynamic module.
@@ -80,7 +80,7 @@ a module exactly as it would be internally in Emacs.
 
 #ifdef HAVE_SHLIB
 void
-unload_git_api ()
+unload_ gitapi ()
 {
   /* We don't need to do anything here in the sample case.  However, if you
      create any new types with INIT_LRECORD_IMPLEMENTATION (sample_type), then

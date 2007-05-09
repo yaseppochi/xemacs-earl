@@ -18,7 +18,7 @@
  * Creation-Date:	2005-01-15
  */
 
-/* Commentary: see neon_api.[hc] for commentary on provided API. */
+/* Commentary: see neonapi.[hc] for commentary on provided API. */
 
 #include <config.h>
 #include "lisp.h"

@@ -21,7 +21,7 @@
 ## Synched up with: Not synched with FSF.
 
 ### Specialize this part for your module
-MODNAME=curl_api
+MODNAME=curlapi
 MODVER=0.0.1
 MODTITLE="Interface to libcurl for XEmacs"
 LDFLAGS=@LDFLAGS@ @curl_libs@

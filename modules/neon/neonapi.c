@@ -19,7 +19,7 @@
  */
 
 /* TODO
-36 matches for "####" in buffer: neon_api.c
+36 matches for "####" in buffer: neonapi.c
      77:  cURL docs: URL_HANDLE identifiers renamed to SESSION_HANDLE
     XXX:  doc and review: the whole neon API
     XXX:  refactor: earl module
@@ -68,7 +68,7 @@
    1379:  the errors in the following switch will leak an ne_xml_parser
 */
 
-/* Commentary: see neon_api.h for commentary on provided API. */
+/* Commentary: see neonapi.h for commentary on provided API. */
 
 /* API principles
  *
@@ -122,7 +122,7 @@
 #include "sysfile.h"
 
 #include "../earl/earl.h"
-#include "neon_api.h"		/* causes inclusion of libneon headers:
+#include "neonapi.h"		/* causes inclusion of libneon headers:
 				   ne_request.h, ne_session.h, ne_string.h,
 				   ne_utils.h, ne_defs.h, ne_ssl.h,
 				   ne_uri.h, ne_xml.h */
@@ -158,7 +158,7 @@ static int neon_credentials_cb (void *userdata, const char *rlm,
 
 /* Local references to Lisp symbols */
 
-static Lisp_Object Qneon_api, Qneon, Qinfinity, Qwebdav_xml, Qaccept_always,
+static Lisp_Object Qneonapi, Qneon, Qinfinity, Qwebdav_xml, Qaccept_always,
   Qaccept_2xx, Qauthorization_failure, Qproxy_authorization_failure,
   Qconnection_failure, Qgeneric_error;
 
@@ -1443,10 +1443,10 @@ neon_credentials_cb (void *userdata, const char *rlm,
 /************************************************************************/
 /*				Module API				*/
 /* Contents:								*/
-/*   modules_of_neon_api						*/
-/*   syms_of_neon_api							*/
-/*   vars_of_neon_api							*/
-/*   unload_neon_api							*/
+/*   modules_of_neonapi						*/
+/*   syms_of_neonapi							*/
+/*   vars_of_neonapi							*/
+/*   unload_neonapi							*/
 /************************************************************************/
 
 /*
@@ -1481,14 +1481,14 @@ neon_credentials_cb (void *userdata, const char *rlm,
 
 #if defined(HAVE_EARL) && 0
 void
-modules_of_neon_api ()
+modules_of_neonapi ()
 {
   emodules_load ("earl.ell", "earl", "0.0.5");
 }
 #endif
 
 void
-syms_of_neon_api ()
+syms_of_neonapi ()
 {
   INIT_LRECORD_IMPLEMENTATION (session_handle);
 
@@ -1512,7 +1512,7 @@ syms_of_neon_api ()
   DEFSUBR (Fneon_request_dispatch);
 
   /* neon-specific symbols. */
-  DEFSYMBOL (Qneon_api);	/* feature symbol */
+  DEFSYMBOL (Qneonapi);	/* feature symbol */
   DEFSYMBOL (Qneon);
   DEFSYMBOL (Qinfinity);
   DEFSYMBOL (Qwebdav_xml);
@@ -1526,10 +1526,10 @@ syms_of_neon_api ()
 }
 
 void
-vars_of_neon_api ()
+vars_of_neonapi ()
 {
 
-  Fprovide (Qneon_api);
+  Fprovide (Qneonapi);
 
   /* #### These aren't used but could be useful, see curl_api. */
 #if 0
@@ -1571,7 +1571,7 @@ corresponding to each key.
 
 #ifdef HAVE_SHLIB
 void
-unload_neon_api ()
+unload_neonapi ()
 {
   /* If we create any new types by INIT_LRECORD_IMPLEMENTATION (sample_type),
      then UNDEF_LRECORD_IMPLEMENTATION (sample_type) must appear here.  Also,
@@ -1582,7 +1582,7 @@ unload_neon_api ()
   /* Shut down libneon and free internal structures.
      #### Anything to do here?  Nothing interesting is documented. */
 
-  unstaticpro_nodump (&Qneon_api);
+  unstaticpro_nodump (&Qneonapi);
   unstaticpro_nodump (&Qneon);
   unstaticpro_nodump (&Qinfinity);
   unstaticpro_nodump (&Qwebdav_xml);

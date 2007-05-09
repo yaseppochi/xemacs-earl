@@ -1,4 +1,4 @@
-##   Makefile for the neon_api module in XEmacs.
+##   Makefile for the neonapi module in XEmacs.
 ##   Copyright (C) 2002 Jerry James.
 ##   Copyright (C) 2005 Stephen J. Turnbull
 
@@ -29,7 +29,7 @@
 
 ## The MODNAME must be a legal C identifier, and need not be the same as
 ## the name of the object file.
-MODNAME=neon_api
+MODNAME=neonapi
 
 ## MODVER may be checked by the module loading code.
 MODVER=0.5.0

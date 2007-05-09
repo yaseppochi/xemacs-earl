@@ -1,3 +1,12 @@
+2007-05-09  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	Rename XXX_api modules to XXXapi.
+	Using the underscore in Lisp looks ugly, but even after years I
+	can't remember if a hyphen is equivalent or not.
+
+	* lisp/mule/canna-leim.el:
+	Identifiers and filename strings updated:  canna_api -> cannaapi.
+
 2005-11-08  Malcolm Purvis  <malcolmp@xemacs.org>
 
 	* help.el:

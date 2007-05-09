@@ -1,5 +1,5 @@
-#ifndef include_NEON_API_H
-#define include_NEON_API_H
+#ifndef include_NEONAPI_H
+#define include_NEONAPI_H
 /*
  * Lisp interface to libneon for XEmacs.
  *
@@ -85,4 +85,4 @@ DECLARE_LRECORD (neon_data, Lisp_Neon_Data);
 
 #define NEON_DATA(handle) ((struct neon_data *) (handle->transport_data))
 
-#endif /* include_NEON_API_H */
+#endif /* include_NEONAPI_H */

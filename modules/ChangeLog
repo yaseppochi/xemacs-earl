@@ -1,3 +1,32 @@
+2007-05-09  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	Rename XXX_api modules to XXXapi.
+	Using the underscore in Lisp looks ugly, but even after years I
+	can't remember if a hyphen is equivalent or not.
+
+	* modules/canna/canna_api.c: Renamed to modules/canna/cannaapi.c.
+	* modules/curl/curl_api.c: Renamed to modules/curl/curlapi.c.
+	* modules/curl/curl_api.h: Renamed to modules/curl/curlapi.h.
+	* modules/git/git_api.c: Renamed to modules/git/gitapi.c.
+	* modules/neon/neon_api.c: Renamed to modules/neon/neonapi.c.
+	* modules/neon/neon_api.h: Renamed to modules/neon/neonapi.h.
+	Renamed, and identifiers and filename strings updated.
+
+	* modules/canna/Makefile.in.in:
+	* modules/curl/Makefile.in.in:
+	* modules/curl/configure.ac:
+	* modules/curl/curl.el:
+	* modules/earl/Makefile.in.in:
+	* modules/earl/configure.ac:
+	* modules/earl/earl.c:
+	* modules/git/Makefile.in.in:
+	* modules/git/configure.ac:
+	* modules/neon/Makefile.in.in:
+	* modules/neon/configure.ac:
+	* modules/neon/neon-test.el:
+	* modules/neon/neon.el:
+	Identifiers and filename strings updated
+
 2007-01-06  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* curl/curl_api.h: Change token to comment in #endif.

@@ -3,7 +3,7 @@
 AC_INIT([session (URL) manager module], [1.0], [xemacs-beta@xemacs.org])
 AC_PREREQ(2.53)
 AC_REVISION($Revision: 1.1 $)
-AC_COPYRIGHT([Configuration script for the neon_api module.
+AC_COPYRIGHT([Configuration script for the earl module.
 Copyright (C) 2002 Jerry James.
 Copyright (C) 2006 Stephen J. Turnbull
 

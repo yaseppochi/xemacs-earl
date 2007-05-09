@@ -1,4 +1,4 @@
-;;; curl.el --- utilities for use with the curl_api module
+;;; curl.el --- utilities for use with the curlapi module
 
 ;; Copyright (C) 2005  Stephen J. Turnbull  <stephen@xemacs.org>
 ;; Copyright (C) 1998 - 2005, Daniel Stenberg, <daniel@haxx.se>, et al.
@@ -13,14 +13,14 @@
 ;; Author:		Stephen J. Turnbull <stephen@xemacs.org>
 ;; Creation-Date:	2005-11-24
 
-(require 'curl-api "curl/curl_api")
+(require 'curlapi "curl/curlapi")
 
 ;; Version information from the cURL I built the first version from.
 ;; This should be fixed to get the information at build time.
-(put 'curl-api 'libcurl-version "7.15.0")
-(put 'curl-api 'libcurl_version_major 7)
-(put 'curl-api 'libcurl_version_minor 15)
-(put 'curl-api 'libcurl_version_patch 0)
+(put 'curlapi 'libcurl-version "7.15.0")
+(put 'curlapi 'libcurl_version_major 7)
+(put 'curlapi 'libcurl_version_minor 15)
+(put 'curlapi 'libcurl_version_patch 0)
 ;; This is the numeric version of the libcurl version number, meant for easier
 ;; parsing and comparions by programs. The LIBCURL_VERSION_NUM define will
 ;; always follow this syntax:

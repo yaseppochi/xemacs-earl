@@ -1,3 +1,21 @@
+2007-05-09  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	Rename XXX_api modules to XXXapi.
+	Using the underscore in Lisp looks ugly, but even after years I
+	can't remember if a hyphen is equivalent or not.
+
+	* src/Makefile.in.in:
+	* src/emacs.c:
+	* src/inline.c:
+	* src/symsinit.h:
+	Identifiers and filename strings updated:
+	modules/canna/canna_api.c -> modules/canna/cannaapi.c
+	modules/curl/curl_api.c -> modules/curl/curlapi.c
+	modules/curl/curl_api.h -> modules/curl/curlapi.h
+	modules/git/git_api.c -> modules/git/gitapi.c
+	modules/neon/neon_api.c -> modules/neon/neonapi.c
+	modules/neon/neon_api.h -> modules/neon/neonapi.h
+
 2007-01-06  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* symsinit.h: Prototype {syms,vars}_of_{earl,curl,neon}.
