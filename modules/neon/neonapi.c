@@ -320,7 +320,7 @@ with lazy initialization of neon-specific session attributes in
  * registers an internal hook which frees the credential storage which
  * has a single ID per request, but the hook can be registered
  * multiple times ... and will try to free the storage multiple times.
- * Ba-a-ad libeon, bad, bad libneon!
+ * Ba-a-ad libneon, bad, bad libneon!
  *
  * Also, we can't simply always ne_forget_auth before adding; that method
  * always clears both.  So we combine these two functions into a single
