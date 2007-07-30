@@ -102,7 +102,7 @@ will result in \"word\" being split into \"wo\" and \"rd\"."
 	     (let ((cdata (list (car parse))))
 	       (while (stringp (cadr parse))
 		 (push (cadr parse) cdata)
-		 (setq parse cdr parse))
+		 (setq parse (cdr parse)))
 	       (push (apply #'concat (nreverse cdata)) result)))
 	    (t (push (car parse) result)))
       (setq parse (cdr parse)))
@@ -140,7 +140,7 @@ may be used in a future version."
   (format "*%s%s %s%s%s accept %s*"
 	  (if (eq reader 'webdav-xml) "parsed " "")
 	  (let ((protocol (assoc method neon-http-descriptions)))
-	    (if (protocol) (nth 1 protocol) "unknown protocol"))
+	    (if protocol (nth 1 protocol) "unknown protocol"))
 	  method
 	  (if auth " w/ auth," "")
 	  (if body " w/ body," "")
