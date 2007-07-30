@@ -1,0 +1,41 @@
+XEmacs Test Suite
+=================
+
+This directory contains the XEmacs test suite.
+
+Except for the subdirectory automated/, which contains the automated
+tests that can be run at build time by `make check', it's rather
+disorganized.  Please add documentation on how to run the tests here.
+
+automated/
+    These are tests that can be run automatically at build time with
+    `make check'.  The test infrastructure is in test-harness.el.
+
+interactive/
+    These are tests that either require user input or interpretation
+    (such as readability of colors), or need to be confirmed because
+    they are related to crashes.  It is planned to have a menu of
+    these tests.
+
+DLL/
+    Tests for dynamically loadable modules.
+    May or may not actually work.
+
+DnD/
+    These test the drag'n'drop facilities.
+    May or may not actually work.
+
+gtk/
+    Tests for the GTK v1 port.
+
+tooltalk/
+    Tests for the ToolTalk protocol in Sun Workshop.
+    May or may not actually work.
+
+sigpipe.c
+    A test for pipe issues by Richard Mlynarik.
+
+auc-tex-test
+    A very simple test for AUCTex.
+    May or may not actually work.
+
