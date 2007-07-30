@@ -1,3 +1,7 @@
+2007-06-02  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* make-docfile.c (write_c_args): Skip close paren of UNUSED macro.
+
 2005-11-13  Ben Wing  <ben@xemacs.org>
 
 	* Makefile.in.in:

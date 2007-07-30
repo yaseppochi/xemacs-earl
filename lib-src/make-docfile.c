@@ -524,6 +524,7 @@ write_c_args (FILE *out, const char *UNUSED (func), char *buf,
     {
       char c = *p;
       int ident_start = 0;
+      int paren_depth = 0;
 
       /* XEmacs addition:  add support for ANSI prototypes and the UNUSED
 	 macros.  Hop over them.  "Lisp_Object" is the only C type allowed
@@ -558,6 +559,7 @@ write_c_args (FILE *out, const char *UNUSED (func), char *buf,
 	      while (isspace ((unsigned char) (*++p)))
 		;
 	      c = *p;
+	      paren_depth++;
 	    }
 	  else
 	    p = here;
@@ -574,6 +576,7 @@ write_c_args (FILE *out, const char *UNUSED (func), char *buf,
 	     parens.  *You* can fix that, I don't see how offhand. ;-) */
 	  while (*p && *p++ != '(')
 	    ;
+	  paren_depth++;
 	  if (*p)
 	    {
 	      while (isspace ((unsigned char) (*p)))
@@ -650,6 +653,11 @@ write_c_args (FILE *out, const char *UNUSED (func), char *buf,
 	{
 	  putc('\\', out);
 	  putc('\r', out);
+	}
+      else if (c == ')' && paren_depth)
+	{
+	  /* Skip close paren of UNUSED macro and decrement depth. */
+	  paren_depth--;
 	}
       else if (c != ' ' || !just_spaced)
 	{
