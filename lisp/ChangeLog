@@ -1,3 +1,8 @@
+2007-07-31  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* neon.el: Moved from ../modules/neon/.
+	* curl.el: Moved from ../modules/curl/.
+
 2007-05-09  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	Rename XXX_api modules to XXXapi.

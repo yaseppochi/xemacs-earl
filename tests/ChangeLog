@@ -1,3 +1,18 @@
+2007-07-31  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* README.tests: New file.
+	* interactive: New directory.
+	* mule: Removed directory.
+
+	* interactive/frame.el:
+	* interactive/glyph-test.el:
+	* interactive/gutter-test.el:
+	* interactive/redisplay-tests.el:
+	* interactive/reproduce-bugs.el:
+	Moved here from parent.
+
+	* interactive/match.el: Moved here from ../mule.
+	
 2005-10-26  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* XEmacs 21.5.23 "daikon" is released.

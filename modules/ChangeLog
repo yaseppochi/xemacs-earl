@@ -1,3 +1,10 @@
+2007-07-31  Stephen J. Turnbull  <stephen@xemacs.org>
+
+	* neon/neon.el: Moved to ../lisp/.
+	* curl/curl.el: Moved to ../lisp/.
+	* neon/neon-test.el: Moved to ../tests/interactive/.
+	* curl/curl-test.el: Moved to ../tests/interactive/.
+
 2007-05-10  Stephen J. Turnbull  <stephen@xemacs.org>
 
 	* neon/neonapi.c (Authentication): Fix typo.
