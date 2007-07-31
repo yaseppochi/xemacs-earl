@@ -13,7 +13,8 @@
 ;; Author:		Stephen J. Turnbull <stephen@xemacs.org>
 ;; Creation-Date:	2005-11-24
 
-(require 'curlapi "curl/curlapi")
+(unless (require 'curlapi nil t)
+  (require 'curlapi "curl/curlapi"))
 
 ;; Version information from the cURL I built the first version from.
 ;; This should be fixed to get the information at build time.

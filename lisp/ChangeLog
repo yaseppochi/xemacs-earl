@@ -1,5 +1,11 @@
 2007-07-31  Stephen J. Turnbull  <stephen@xemacs.org>
 
+	* neon.el:
+	* curl.el:
+	Fix up conditional requires of APIs.
+
+2007-07-31  Stephen J. Turnbull  <stephen@xemacs.org>
+
 	* neon.el: Moved from ../modules/neon/.
 	* curl.el: Moved from ../modules/curl/.
 

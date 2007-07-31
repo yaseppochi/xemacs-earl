@@ -12,7 +12,7 @@
 ;; Author:		Stephen J. Turnbull <stephen@xemacs.org>
 ;; Creation-Date:	2005-11-24
 
-(unless (require 'neonapi "neonapi" 'no-error)
+(unless (require 'neonapi nil 'no-error)
   (require 'neonapi "neon/neonapi"))
 
 ;; Version information from the libneon I built the first version from.
