@@ -4,14 +4,16 @@
 
 ;;; Commentary
 
-;; To configure, create a file named "neon-test-user.el" in the build root.
+;; To configure, create a file named "neon-test-user.el" on load-path.
 
-;; In it set the values of `neon-test-server', `neon-test-path-public',
-;; `neon-test-path-private', `neon-test-user', and `neon-test-secret'.
-;; Optionally, define a function `neon-test-auth-cb'.  (This file provides
-;; a default definition which should be sufficient for testing.)
+;; In it set the values of `neon-test-server' (an URL containing the scheme
+;;  and authority parts), `neon-test-path-public' (an absolute path),
+;; (an absolute path) `neon-test-path-private', `neon-test-user' (a string),
+;; and `neon-test-secret' (a string).  Optionally, define a function
+;; `neon-test-auth-cb'.  (This file provides a default definition which
+;; should be sufficient for testing.)
 ;; We also provide a variable to define an authentication header, which is
-;; list of two strings (the tag and the contents).
+;; a list of two strings (the tag and the contents).
 
 ;; This file also contains a LISP emulation of the algorithms used in the
 ;; callbacks in the C code.
@@ -64,9 +66,10 @@
 ;; like this.
 ;; #### why not simply
 ;; (require 'neon-test-user (expand-file-name "neon-test-user"))
-(let ((test-configuration (expand-file-name "../../neon-test-user.el")))
-  (when (file-readable-p test-configuration)
-    (load-file test-configuration)))
+;; (let ((test-configuration (expand-file-name "../../neon-test-user.el")))
+;;   (when (file-readable-p test-configuration)
+;;     (load-file test-configuration)))
+(require 'neon-test-user)
 
 ;; Configuration variables
 
@@ -189,11 +192,10 @@ Optional AUTH is a boolean indicating whether a authentication callback was
      (neon-request-test mh neon-test-path-public "OPTIONS"
 			'raw 'accept-always nil nil))
     (goto-char (point-max))
-    (insert "\n")
-    (mapc (lambda (response-headers)
-	    (insert (format "%S %S\n"
-			    (car response-headers) (cadr response-headers))))
-	  (plist-get (object-plist mh) 'last-response-headers)))
+    (let ((headers (plist-get (object-plist mh) 'last-response-headers)))
+      (while headers
+	(insert (format "%S %S\n" (car headers) (cadr headers)))
+	(setq headers (cddr headers)))))
   (neon-request-test mh neon-test-path-public "HEAD"
 		     'raw        'accept-always nil nil)
   (neon-request-test mh neon-test-path-public "GET"
