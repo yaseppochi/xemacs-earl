@@ -1,3 +1,11 @@
+# Compiled Emacs Lisp and Emacs editor backups
+*.elc
+*~
+
+# Tom Lord conventions for build directories (+) and scratch files (,)
++*
+,*
+
 # Prerequisites
 *.d
 
